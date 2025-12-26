@@ -1,0 +1,13 @@
+.env
+.env.local
+.env.*.local
+out/
+cache/
+node_modules/
+.DS_Store
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+.history/

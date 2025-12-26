@@ -1,0 +1,17 @@
+# Foundry 开发环境配置
+
+这个目录用于存放 Foundry 依赖库。
+
+## 安装依赖
+
+```bash
+# 安装 Forge Standard Library
+forge install foundry-rs/forge-std
+
+# 其他常用依赖
+forge install OpenZeppelin/openzeppelin-contracts
+```
+
+## 默认包含的库
+
+- `forge-std` - Foundry 标准库
