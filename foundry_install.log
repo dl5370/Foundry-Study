@@ -1,0 +1,23 @@
+    Updating git repository `https://github.com/foundry-rs/foundry.git`
+  Installing forge v1.5.1 (https://github.com/foundry-rs/foundry.git#fdf5732d)
+    Updating git repository `https://github.com/paradigmxyz/reth`
+From https://github.com/paradigmxyz/reth
+ * [new ref]             64909d33e6b7ab60774e37f5508fb5ad17f41897 -> refs/commit/64909d33e6b7ab60774e37f5508fb5ad17f41897
+    Updating crates.io index
+From https://github.com/rust-lang/crates.io-index
+   b17111ef7c..f95e402a11             -> origin/HEAD
+warning: package `aws-smithy-runtime v1.9.6` in Cargo.lock is yanked in registry `crates-io`, consider running without --locked
+warning: Patch `rexpect v0.6.2 (https://github.com/rust-cli/rexpect?rev=2ed0b1898d7edaf6a85bedbae71a01cc578958fc#2ed0b189)` was not used in the crate graph.
+Check that the patched package version and available features are compatible
+with the dependency requirements. If the patch has a different version from
+what is locked in the Cargo.lock file, run `cargo update` to use the new
+version. This may also occur with an optional dependency that is not enabled.
+ Downloading crates ...
+error: failed to compile `forge v1.5.1 (https://github.com/foundry-rs/foundry.git#fdf5732d)`, intermediate artifacts can be found at `/var/folders/8p/h4ftgsc16k71m61k1wrtq69r0000gn/T/cargo-install3VfqAd`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+
+Caused by:
+  failed to download from `https://static.crates.io/crates/addr2line/0.25.1/download`
+
+Caused by:
+  [60] SSL peer certificate or SSH remote key was not OK (SSL: no alternative certificate subject name matches target host name 'static.crates.io')

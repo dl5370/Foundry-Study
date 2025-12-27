@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
 import {Counter} from "../src/Counter.sol";
 
 contract Deploy is Script {
