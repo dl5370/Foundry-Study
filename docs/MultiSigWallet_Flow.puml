@@ -1,0 +1,95 @@
+@startuml MultiSigWallet_Flow
+skinparam backgroundColor #FEFEFE
+skinparam sequence {
+    ArrowColor #333333
+    ActorBorderColor #333333
+    ActorBackgroundColor #DDD
+    ActorFontColor #000
+    ParticipantBorderColor #333333
+    ParticipantBackgroundColor #FFF
+    ParticipantFontColor #000
+}
+
+title Multi-Signature Wallet Transaction Flow
+
+actor Alice
+actor Bob
+actor Carol
+actor David
+participant Wallet
+participant Token
+
+== Init ==
+Alice -> Wallet: Create(owners=[A,B,C], required=2)
+activate Wallet
+note right Wallet
+  numConfirmations=0
+end note
+deactivate Wallet
+
+== Step 1: Mint Token ==
+Alice -> Token: Mint(1000 MTK)
+activate Token
+Token --> Alice: Success
+deactivate Token
+
+== Step 2: Submit TX ==
+Alice -> Wallet: submitTransaction(txId=0, to=David, amount=100)
+activate Wallet
+note right Wallet
+  TX 0: numConfirmations=0
+end note
+Wallet --> Alice: Submitted
+deactivate Wallet
+
+== Step 3: Bob Confirms ==
+Bob -> Wallet: confirmTransaction(txId=0)
+activate Wallet
+note right Wallet
+  TX 0: numConfirmations=1
+  Need 1 more
+end note
+Wallet --> Bob: Confirmed (1/2)
+deactivate Wallet
+
+== Step 4: Carol Confirms ==
+Carol -> Wallet: confirmTransaction(txId=0)
+activate Wallet
+note right Wallet
+  TX 0: numConfirmations=2
+  [THRESHOLD REACHED!]
+  Event: ConfirmationThresholdReached
+end note
+Wallet --> Carol: Confirmed (2/2)
+deactivate Wallet
+
+== Step 5: Check Status ==
+Alice -> Wallet: isTransactionReady(txId=0)
+activate Wallet
+note right Wallet
+  Return: true
+end note
+Wallet --> Alice: true
+deactivate Wallet
+
+== Step 6: Execute TX ==
+Alice -> Wallet: executeTransaction(txId=0)
+activate Wallet
+Wallet -> Token: transferFrom(100 to David)
+activate Token
+Token --> David: Receive 100 MTK
+deactivate Token
+note right Wallet
+  TX 0: executed=true
+end note
+Wallet --> Alice: Success
+deactivate Wallet
+
+== Final State ==
+note over Alice, David
+  Wallet: 900 MTK
+  David: 100 MTK
+  TX 0: executed
+end note
+
+@enduml

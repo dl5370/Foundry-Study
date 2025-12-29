@@ -14,6 +14,7 @@ contract MultiSigWallet {
     event ConfirmTransaction(address indexed owner, uint indexed txId);
     event RevokeConfirmation(address indexed owner, uint indexed txId);
     event ExecuteTransaction(uint indexed txId);
+    event ConfirmationThresholdReached(uint indexed txId, uint numConfirmations); // 新增：达到阈值时触发
 
     address[] public owners;
     mapping(address => bool) public isOwner;
@@ -85,6 +86,11 @@ contract MultiSigWallet {
         confirmations[txId][msg.sender] = true;
         transactions[txId].numConfirmations += 1;
         emit ConfirmTransaction(msg.sender, txId);
+        
+        // 新增：检查是否达到阈值，如果达到则发出事件通知
+        if (transactions[txId].numConfirmations == required) {
+            emit ConfirmationThresholdReached(txId, transactions[txId].numConfirmations);
+        }
     }
 
     function revokeConfirmation(uint txId) public onlyOwner txExists(txId) notExecuted(txId) {
@@ -122,4 +128,31 @@ contract MultiSigWallet {
         Transaction storage txn = transactions[txId];
         return (txn.token, txn.to, txn.value, txn.data, txn.executed, txn.numConfirmations);
     }
-}
+
+    /// @notice 返回指定交易已确认的 owner 列表
+    function getConfirmations(uint _txId) public view returns (address[] memory) {
+        require(_txId < transactions.length, "tx does not exist");
+        uint count = 0;
+        // 先统计确认数以便分配数组
+        for (uint i = 0; i < owners.length; i++) {
+            if (confirmations[_txId][owners[i]]) {
+                count++;
+            }
+        }
+        address[] memory confirmed = new address[](count);
+        uint idx = 0;
+        for (uint i = 0; i < owners.length; i++) {
+            if (confirmations[_txId][owners[i]]) {
+                confirmed[idx] = owners[i];
+                idx++;
+            }
+        }
+        return confirmed;
+    }
+
+    /// @notice Check if transaction is ready to be executed (threshold reached)
+    function isTransactionReady(uint _txId) public view returns (bool) {
+        require(_txId < transactions.length, "tx does not exist");
+        return transactions[_txId].numConfirmations >= required && !transactions[_txId].executed;
+    }
+ }
