@@ -129,115 +129,79 @@ forge script script/Deploy.s.sol:Deploy --rpc-url sepolia --broadcast --verify
 
 ### 交易执行流程
 
-下图展示了多签钱包的完整交易流程：
+下图展示了多签钱包的完整交易流程（GitHub 原生支持）：
 
-```plantuml
-@startuml MultiSigWallet_Flow
-skinparam backgroundColor #FEFEFE
-skinparam sequence {
-    ArrowColor #333333
-    ActorBorderColor #333333
-    ActorBackgroundColor #DDD
-    ActorFontColor #000
-    ParticipantBorderColor #333333
-    ParticipantBackgroundColor #FFF
-    ParticipantFontColor #000
-}
+```mermaid
+sequenceDiagram
+    participant Alice
+    participant Bob
+    participant Carol
+    participant Wallet
+    participant Token
+    participant David
 
-title Multi-Signature Wallet Transaction Flow
+    rect rgb(200, 240, 200)
+    Note over Alice,David: Init: Create Wallet (3 owners, 2-of-3)
+    Alice->>Wallet: new MultiSigWallet([A,B,C], 2)
+    end
 
-actor Alice
-actor Bob
-actor Carol
-actor David
-participant Wallet
-participant Token
+    rect rgb(200, 240, 200)
+    Note over Alice,Token: Step 1: Mint Token
+    Alice->>Token: mint(wallet, 1000 MTK)
+    Token->>Token: balanceOf[wallet] = 1000
+    end
 
-== Init ==
-Alice -> Wallet: Create(owners=[A,B,C], required=2)
-activate Wallet
-note right Wallet
-  numConfirmations=0
-end note
-deactivate Wallet
+    rect rgb(200, 240, 200)
+    Note over Alice,Wallet: Step 2: Alice Submit Transaction
+    Alice->>Wallet: submitTransaction(MTK, David, 100)
+    Note over Wallet: txId=0<br/>numConfirmations=0<br/>executed=false
+    end
 
-== Step 1: Mint Token ==
-Alice -> Token: Mint(1000 MTK)
-activate Token
-Token --> Alice: Success
-deactivate Token
+    rect rgb(200, 240, 200)
+    Note over Bob,Wallet: Step 3: Bob Confirms (1/2)
+    Bob->>Wallet: confirmTransaction(0)
+    Note over Wallet: numConfirmations=1<br/>Need 1 more
+    end
 
-== Step 2: Submit TX ==
-Alice -> Wallet: submitTransaction(txId=0, to=David, amount=100)
-activate Wallet
-note right Wallet
-  TX 0: numConfirmations=0
-end note
-Wallet --> Alice: Submitted
-deactivate Wallet
+    rect rgb(240, 200, 200)
+    Note over Carol,Wallet: Step 4: Carol Confirms (2/2) ⭐ THRESHOLD!
+    Carol->>Wallet: confirmTransaction(0)
+    Note over Wallet: numConfirmations=2<br/>Threshold Reached!<br/>Event: ConfirmationThresholdReached
+    Wallet-->>Carol: ✅ Confirmed (2/2)
+    end
 
-== Step 3: Bob Confirms ==
-Bob -> Wallet: confirmTransaction(txId=0)
-activate Wallet
-note right Wallet
-  TX 0: numConfirmations=1
-  Need 1 more
-end note
-Wallet --> Bob: Confirmed (1/2)
-deactivate Wallet
+    rect rgb(200, 200, 240)
+    Note over Alice,Wallet: Step 5: Check If Ready
+    Alice->>Wallet: isTransactionReady(0)
+    Wallet-->>Alice: true
+    end
 
-== Step 4: Carol Confirms ==
-Carol -> Wallet: confirmTransaction(txId=0)
-activate Wallet
-note right Wallet
-  TX 0: numConfirmations=2
-  [THRESHOLD REACHED!]
-  Event: ConfirmationThresholdReached
-end note
-Wallet --> Carol: Confirmed (2/2)
-deactivate Wallet
+    rect rgb(200, 240, 200)
+    Note over Alice,David: Step 6: Execute Transaction
+    Alice->>Wallet: executeTransaction(0)
+    Wallet->>Token: transfer(100 to David)
+    Token->>David: Receive 100 MTK
+    Note over Wallet: executed=true
+    Wallet-->>Alice: ✅ Success
+    end
 
-== Step 5: Check Status ==
-Alice -> Wallet: isTransactionReady(txId=0)
-activate Wallet
-note right Wallet
-  Return: true
-end note
-Wallet --> Alice: true
-deactivate Wallet
-
-== Step 6: Execute TX ==
-Alice -> Wallet: executeTransaction(txId=0)
-activate Wallet
-Wallet -> Token: transferFrom(100 to David)
-activate Token
-Token --> David: Receive 100 MTK
-deactivate Token
-note right Wallet
-  TX 0: executed=true
-end note
-Wallet --> Alice: Success
-deactivate Wallet
-
-== Final State ==
-note over Alice, David
-  Wallet: 900 MTK
-  David: 100 MTK
-  TX 0: executed
-end note
-
-@enduml
+    rect rgb(240, 240, 200)
+    Note over Alice,David: Final State
+    Note over Wallet: Wallet: 900 MTK
+    Note over David: David: 100 MTK
+    Note over Wallet: TX 0: executed ✓
+    end
 ```
 
 **流程说明：**
 1. **初始化** - 创建 3 个所有者的钱包，设置 2/3 的签名阈值
 2. **铸币** - 为钱包铸造 1000 MTK 代币
-3. **提交交易** - Alice 提交转账 100 MTK 给 David 的交易
+3. **提交交易** - Alice 提交转账 100 MTK 给 David 的交易（txId=0）
 4. **Bob 确认** - 第一个确认者签名（1/2）
 5. **Carol 确认** - 第二个确认者签名，达到阈值（2/2） ⭐ **触发通知事件**
 6. **检查就绪状态** - `isTransactionReady()` 返回 `true`，交易已准备好执行
-7. **执行交易** - Alice 执行交易，完成转账
-8. **最终状态** - 交易已执行，余额更新完成
+7. **执行交易** - Alice 执行交易，完成转账给 David
+8. **最终状态** - 交易已执行，余额更新完成（Wallet: 900 MTK, David: 100 MTK）
 
 ## 常用命令
 
