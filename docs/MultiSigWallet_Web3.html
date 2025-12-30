@@ -550,6 +550,7 @@
 
         async function connectWallet() {
             try {
+                // Check 1: MetaMask installed?
                 if (typeof window.ethereum === 'undefined') {
                     // Show installation guide
                     const installMsg = `🦊 未检测到 MetaMask 钱包扩展！\n\n` +
@@ -566,7 +567,25 @@
                     return;
                 }
 
-                // Request account access
+                // Show connection guide
+                addLog('提示', '正在请求连接 MetaMask...');
+
+                const guideMsg = `🔐 准备连接 MetaMask\n\n` +
+                    `请按照以下步骤操作：\n\n` +
+                    `1️⃣ 如果这是第一次使用 MetaMask：\n` +
+                    `   - MetaMask 会自动弹出引导界面\n` +
+                    `   - 选择 "创建新钱包"\n` +
+                    `   - 设置密码并保存助记词（非常重要！）\n\n` +
+                    `2️⃣ 如果已有钱包但未登录：\n` +
+                    `   - 输入密码登录 MetaMask\n\n` +
+                    `3️⃣ 登录后：\n` +
+                    `   - 点击 "下一步" 和 "连接" 授权本应用访问\n\n` +
+                    `⚠️ 注意：本应用使用本地测试网络，需要导入测试账户`;
+
+                alert(guideMsg);
+                addLog('引导', 'MetaMask 将弹出窗口，请按提示操作...');
+
+                // Request account access - MetaMask will handle login/setup
                 await window.ethereum.request({ method: 'eth_requestAccounts' });
 
                 provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -606,8 +625,33 @@
 
             } catch (error) {
                 console.error(error);
-                addLog('错误', `连接失败: ${error.message}`);
-                alert('连接 MetaMask 失败: ' + error.message);
+
+                // Handle different error cases
+                if (error.code === 4001) {
+                    // User rejected the connection request
+                    addLog('取消', '用户取消了连接请求');
+                    alert('❌ 连接已取消\n\n您拒绝了连接请求。如需使用本应用，请点击"连接 MetaMask"并在 MetaMask 弹窗中点击"连接"。');
+                } else if (error.code === -32002) {
+                    // Request already pending
+                    addLog('等待', '已有待处理的连接请求');
+                    alert('⏳ 请求处理中\n\n请在 MetaMask 弹窗中完成操作。\n如果看不到弹窗，请点击浏览器右上角的 MetaMask 图标。');
+                } else if (error.message && error.message.includes('Already processing')) {
+                    addLog('等待', 'MetaMask 正在处理其他请求');
+                    alert('⏳ MetaMask 繁忙\n\n请稍候片刻，然后重试。\n确保已完成其他正在进行的操作。');
+                } else if (error.message && error.message.includes('User closed modal')) {
+                    addLog('取消', '用户关闭了 MetaMask 弹窗');
+                    alert('❌ 操作已取消\n\n您关闭了 MetaMask 窗口。请重新点击"连接 MetaMask"完成连接。');
+                } else {
+                    // Other errors
+                    addLog('错误', `连接失败: ${error.message || '未知错误'}`);
+                    const errorMsg = `⚠️ 连接失败\n\n错误信息: ${error.message || '未知错误'}\n\n` +
+                        `可能的原因：\n` +
+                        `1. MetaMask 未解锁 - 请输入密码登录\n` +
+                        `2. MetaMask 未初始化 - 请先创建或导入钱包\n` +
+                        `3. 浏览器问题 - 请刷新页面重试\n\n` +
+                        `如仍有问题，请检查浏览器控制台的详细错误信息。`;
+                    alert(errorMsg);
+                }
             }
         }
 
