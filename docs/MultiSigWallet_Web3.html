@@ -567,25 +567,8 @@
                     return;
                 }
 
-                // Show connection guide
-                addLog('提示', '正在请求连接 MetaMask...');
-
-                const guideMsg = `🔐 准备连接 MetaMask\n\n` +
-                    `请按照以下步骤操作：\n\n` +
-                    `1️⃣ 如果这是第一次使用 MetaMask：\n` +
-                    `   - MetaMask 会自动弹出引导界面\n` +
-                    `   - 选择 "创建新钱包"\n` +
-                    `   - 设置密码并保存助记词（非常重要！）\n\n` +
-                    `2️⃣ 如果已有钱包但未登录：\n` +
-                    `   - 输入密码登录 MetaMask\n\n` +
-                    `3️⃣ 登录后：\n` +
-                    `   - 点击 "下一步" 和 "连接" 授权本应用访问\n\n` +
-                    `⚠️ 注意：本应用使用本地测试网络，需要导入测试账户`;
-
-                alert(guideMsg);
-                addLog('引导', 'MetaMask 将弹出窗口，请按提示操作...');
-
                 // Request account access - MetaMask will handle login/setup
+                addLog('提示', '正在请求连接 MetaMask...');
                 await window.ethereum.request({ method: 'eth_requestAccounts' });
 
                 provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -641,15 +624,36 @@
                 } else if (error.message && error.message.includes('User closed modal')) {
                     addLog('取消', '用户关闭了 MetaMask 弹窗');
                     alert('❌ 操作已取消\n\n您关闭了 MetaMask 窗口。请重新点击"连接 MetaMask"完成连接。');
+                } else if (error.code === -32603 || (error.message && (
+                    error.message.includes('wallet_requestPermissions') ||
+                    error.message.includes('Request of type') ||
+                    error.message.toLowerCase().includes('unauthorized')
+                ))) {
+                    // MetaMask is locked or not initialized
+                    addLog('提示', 'MetaMask 需要解锁或初始化');
+                    const unlockMsg = `🔒 MetaMask 未就绪\n\n` +
+                        `请按照以下步骤操作：\n\n` +
+                        `1️⃣ 如果 MetaMask 已锁定：\n` +
+                        `   • 点击浏览器右上角的 MetaMask 图标\n` +
+                        `   • 输入密码解锁钱包\n` +
+                        `   • 然后重新点击"连接 MetaMask"按钮\n\n` +
+                        `2️⃣ 如果是首次使用 MetaMask：\n` +
+                        `   • 点击 MetaMask 图标\n` +
+                        `   • 选择"创建新钱包"或"导入已有钱包"\n` +
+                        `   • 完成设置后重新连接\n\n` +
+                        `3️⃣ 本应用使用本地测试网络(localhost:8545)\n` +
+                        `   • 需要导入测试账户私钥\n` +
+                        `   • 测试网络 Chain ID: 31337`;
+                    alert(unlockMsg);
                 } else {
                     // Other errors
                     addLog('错误', `连接失败: ${error.message || '未知错误'}`);
                     const errorMsg = `⚠️ 连接失败\n\n错误信息: ${error.message || '未知错误'}\n\n` +
-                        `可能的原因：\n` +
-                        `1. MetaMask 未解锁 - 请输入密码登录\n` +
-                        `2. MetaMask 未初始化 - 请先创建或导入钱包\n` +
-                        `3. 浏览器问题 - 请刷新页面重试\n\n` +
-                        `如仍有问题，请检查浏览器控制台的详细错误信息。`;
+                        `常见解决方法：\n` +
+                        `1. 确保 MetaMask 已解锁（点击右上角图标登录）\n` +
+                        `2. 刷新页面后重试\n` +
+                        `3. 检查 MetaMask 是否正常工作\n\n` +
+                        `详细错误信息请查看浏览器控制台 (F12)`;
                     alert(errorMsg);
                 }
             }
