@@ -108,28 +108,6 @@
             margin: 8px 0;
         }
 
-        .checkbox-custom {
-            width: 24px;
-            height: 24px;
-            border: 2px solid #667eea;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            background: white;
-            transition: all 0.3s;
-        }
-
-        .checkbox-custom.checked {
-            background: #667eea;
-            color: white;
-        }
-
-        .checkbox-custom:hover {
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-        }
-
         button {
             padding: 12px 24px;
             margin: 10px 0;
@@ -472,40 +450,39 @@
                 <h2>✍️ 确认过程</h2>
 
                 <div class="info-box">
-                    <strong>💡 提示:</strong> 点击下方所有者的复选框来模拟他们的签名
+                    <strong>💡 提示:</strong> 点击下方按钮模拟签名者的确认操作
                 </div>
 
                 <!-- Alice Section -->
                 <div class="owner-section">
                     <div class="owner-name">👤 Alice (提议者)</div>
-                    <div class="confirmation-status">
-                        <span>Alice 提交了交易</span>
-                        <span style="color: #10b981; font-weight: bold;">✓</span>
+                    <div class="confirmation-status" id="aliceStatus">
+                        <span>等待提交交易...</span>
                     </div>
-                    <button class="btn-primary" onclick="submitTransaction()">📤 提交交易</button>
+                    <button class="btn-primary" id="submitBtn" onclick="submitTransaction()">📤 提交交易</button>
                 </div>
 
                 <!-- Bob Section -->
                 <div class="owner-section">
                     <div class="owner-name">👤 Bob (签名者 1)</div>
-                    <div class="confirmation-status">
-                        <div class="checkbox-custom" id="bobCheckbox" onclick="toggleBobConfirmation()"></div>
-                        <span>确认交易</span>
+                    <div class="confirmation-status" id="bobStatus">
+                        <span>状态: </span>
+                        <span id="bobStatusText" style="color: #ef4444; font-weight: bold;">❌ 未签名</span>
                     </div>
-                    <button class="btn-warning" onclick="toggleBobConfirmation()">
-                        <span id="bobButtonText">👍 Bob 签名</span>
+                    <button class="btn-warning" id="bobBtn" onclick="toggleBobConfirmation()">
+                        <span id="bobButtonText">✍️ 点击确认签名</span>
                     </button>
                 </div>
 
                 <!-- Carol Section -->
                 <div class="owner-section">
                     <div class="owner-name">👤 Carol (签名者 2)</div>
-                    <div class="confirmation-status">
-                        <div class="checkbox-custom" id="carolCheckbox" onclick="toggleCarolConfirmation()"></div>
-                        <span>确认交易</span>
+                    <div class="confirmation-status" id="carolStatus">
+                        <span>状态: </span>
+                        <span id="carolStatusText" style="color: #ef4444; font-weight: bold;">❌ 未签名</span>
                     </div>
-                    <button class="btn-warning" onclick="toggleCarolConfirmation()">
-                        <span id="carolButtonText">👍 Carol 签名</span>
+                    <button class="btn-warning" id="carolBtn" onclick="toggleCarolConfirmation()">
+                        <span id="carolButtonText">✍️ 点击确认签名</span>
                     </button>
                 </div>
 
@@ -668,8 +645,16 @@ function isTransactionReady(uint _txId) public view returns (bool) {<br/>
             }
             state.txSubmitted = true;
             addEvent('SubmitTransaction', 'Alice 提交了转账 100 MTK 给 David 的交易 (txId=0)');
+
+            // Update Alice's UI
+            document.getElementById('aliceStatus').innerHTML = '<span>交易已提交 </span><span style="color: #10b981; font-weight: bold;">✓</span>';
+            document.getElementById('submitBtn').textContent = '✅ 交易已提交';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').style.opacity = '0.6';
+
             markStepCompleted(2);
-            markStepActive(3);
+            markStepCompleted(3);
+            markStepActive(4);
             updateDisplay();
         }
 
@@ -682,14 +667,26 @@ function isTransactionReady(uint _txId) public view returns (bool) {<br/>
             if (state.confirmations.bob) {
                 addEvent('ConfirmTransaction', 'Bob 确认了交易 (1/2)');
                 markStepCompleted(4);
-                document.getElementById('bobCheckbox').classList.add('checked');
-                document.getElementById('bobCheckbox').innerHTML = '✓';
-                document.getElementById('bobButtonText').textContent = '✓ Bob 已签名';
+
+                // Update status display
+                document.getElementById('bobStatusText').innerHTML = '✅ 已签名';
+                document.getElementById('bobStatusText').style.color = '#10b981';
+
+                // Update button
+                document.getElementById('bobButtonText').textContent = '↩️ 撤销签名';
+                document.getElementById('bobBtn').classList.remove('btn-warning');
+                document.getElementById('bobBtn').classList.add('btn-success');
             } else {
                 addEvent('RevokeConfirmation', 'Bob 撤销了签名');
-                document.getElementById('bobCheckbox').classList.remove('checked');
-                document.getElementById('bobCheckbox').innerHTML = '';
-                document.getElementById('bobButtonText').textContent = '👍 Bob 签名';
+
+                // Update status display
+                document.getElementById('bobStatusText').innerHTML = '❌ 未签名';
+                document.getElementById('bobStatusText').style.color = '#ef4444';
+
+                // Update button
+                document.getElementById('bobButtonText').textContent = '✍️ 点击确认签名';
+                document.getElementById('bobBtn').classList.remove('btn-success');
+                document.getElementById('bobBtn').classList.add('btn-warning');
             }
             updateDisplay();
         }
@@ -703,10 +700,16 @@ function isTransactionReady(uint _txId) public view returns (bool) {<br/>
             if (state.confirmations.carol) {
                 addEvent('ConfirmTransaction', 'Carol 确认了交易 (2/2)');
                 markStepCompleted(5);
-                document.getElementById('carolCheckbox').classList.add('checked');
-                document.getElementById('carolCheckbox').innerHTML = '✓';
-                document.getElementById('carolButtonText').textContent = '✓ Carol 已签名';
-                
+
+                // Update status display
+                document.getElementById('carolStatusText').innerHTML = '✅ 已签名';
+                document.getElementById('carolStatusText').style.color = '#10b981';
+
+                // Update button
+                document.getElementById('carolButtonText').textContent = '↩️ 撤销签名';
+                document.getElementById('carolBtn').classList.remove('btn-warning');
+                document.getElementById('carolBtn').classList.add('btn-success');
+
                 // Check if threshold is reached
                 if (getConfirmationCount() >= REQUIRED_CONFIRMATIONS) {
                     addEvent('ConfirmationThresholdReached', '🔔 已达到签名阈值! 交易已准备好执行');
@@ -715,9 +718,15 @@ function isTransactionReady(uint _txId) public view returns (bool) {<br/>
                 }
             } else {
                 addEvent('RevokeConfirmation', 'Carol 撤销了签名');
-                document.getElementById('carolCheckbox').classList.remove('checked');
-                document.getElementById('carolCheckbox').innerHTML = '';
-                document.getElementById('carolButtonText').textContent = '👍 Carol 签名';
+
+                // Update status display
+                document.getElementById('carolStatusText').innerHTML = '❌ 未签名';
+                document.getElementById('carolStatusText').style.color = '#ef4444';
+
+                // Update button
+                document.getElementById('carolButtonText').textContent = '✍️ 点击确认签名';
+                document.getElementById('carolBtn').classList.remove('btn-success');
+                document.getElementById('carolBtn').classList.add('btn-warning');
             }
             updateDisplay();
         }
@@ -738,8 +747,14 @@ function isTransactionReady(uint _txId) public view returns (bool) {<br/>
 
             addEvent('ExecuteTransaction', 'Alice 执行了交易 (txId=0)');
             addEvent('Transfer', `成功转账 ${TRANSFER_AMOUNT} MTK 从钱包到 David`);
-            
+
             showNotification('✅ 交易执行成功!', 'success');
+
+            // Update execute button
+            document.getElementById('executeBtn').textContent = '✅ 交易已执行';
+            document.getElementById('executeBtn').disabled = true;
+            document.getElementById('executeBtn').style.opacity = '0.6';
+
             markStepCompleted(6);
             markStepCompleted(7);
             markStepCompleted(8);
@@ -834,17 +849,31 @@ function isTransactionReady(uint _txId) public view returns (bool) {<br/>
                 events: []
             };
 
-            // Reset UI
-            document.getElementById('bobCheckbox').classList.remove('checked');
-            document.getElementById('bobCheckbox').innerHTML = '';
-            document.getElementById('bobButtonText').textContent = '👍 Bob 签名';
-            
-            document.getElementById('carolCheckbox').classList.remove('checked');
-            document.getElementById('carolCheckbox').innerHTML = '';
-            document.getElementById('carolButtonText').textContent = '👍 Carol 签名';
+            // Reset Alice UI
+            document.getElementById('aliceStatus').innerHTML = '<span>等待提交交易...</span>';
+            document.getElementById('submitBtn').textContent = '📤 提交交易';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').style.opacity = '1';
 
+            // Reset Bob UI
+            document.getElementById('bobStatusText').innerHTML = '❌ 未签名';
+            document.getElementById('bobStatusText').style.color = '#ef4444';
+            document.getElementById('bobButtonText').textContent = '✍️ 点击确认签名';
+            document.getElementById('bobBtn').classList.remove('btn-success');
+            document.getElementById('bobBtn').classList.add('btn-warning');
+
+            // Reset Carol UI
+            document.getElementById('carolStatusText').innerHTML = '❌ 未签名';
+            document.getElementById('carolStatusText').style.color = '#ef4444';
+            document.getElementById('carolButtonText').textContent = '✍️ 点击确认签名';
+            document.getElementById('carolBtn').classList.remove('btn-success');
+            document.getElementById('carolBtn').classList.add('btn-warning');
+
+            // Reset notification and execute button
             document.getElementById('thresholdNotification').classList.remove('show');
+            document.getElementById('executeBtn').textContent = '⚡ 执行交易';
             document.getElementById('executeBtn').disabled = true;
+            document.getElementById('executeBtn').style.opacity = '1';
 
             // Reset timeline
             for (let i = 1; i <= 8; i++) {

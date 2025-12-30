@@ -4,14 +4,40 @@
 
 ## 🎮 交互式模拟器
 
-**[点击这里打开多签钱包模拟器 →](./docs/MultiSigWallet_Simulator.html)**
-
 在浏览器中实时体验多签钱包的完整流程：
 - ✅ 模拟交易提交
 - ✅ 多人签名确认
 - ✅ 阈值达成事件通知
 - ✅ 交易执行
 - 📝 实时事件日志
+
+### 如何打开模拟器
+
+**方式 1：克隆到本地后双击文件**
+```bash
+# 克隆仓库
+git clone <your-repo-url>
+cd Foundry-Study
+
+# 在 Finder 中找到 docs/MultiSigWallet_Simulator.html 文件，双击即可在浏览器中打开
+```
+
+**方式 2：使用命令行打开**
+```bash
+# macOS
+open docs/MultiSigWallet_Simulator.html
+
+# Linux
+xdg-open docs/MultiSigWallet_Simulator.html
+
+# Windows
+start docs/MultiSigWallet_Simulator.html
+```
+
+**方式 3：拖放到浏览器**
+- 直接将 `docs/MultiSigWallet_Simulator.html` 文件拖到浏览器窗口中
+
+> **注意**：模拟器是纯静态 HTML 文件，无需安装依赖或启动服务器，下载后即可直接在浏览器中打开使用。
 
 ## 目录结构
 
