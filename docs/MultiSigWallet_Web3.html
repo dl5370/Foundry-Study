@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多签钱包 Web3 dApp - MultiSigWallet</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .connection-status {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .card h3 {
+            color: #764ba2;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .state-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .state-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .state-value {
+            color: #667eea;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        .owner-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .owner-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .confirmation-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        button {
+            padding: 12px 24px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background: #d97706;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .notification {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        .notification.success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+
+        .notification.warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #78350f;
+        }
+
+        .notification.error {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #7f1d1d;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .threshold-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .threshold-status.not-ready {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+
+        .threshold-status.ready {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            color: #333;
+        }
+
+        .balance-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .balance-item {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .balance-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .balance-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .transaction-details {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .transaction-details p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔐 多签钱包 Web3 dApp</h1>
+            <p>MultiSigWallet - 真实区块链交互</p>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="connection-status">
+            <h2 style="color: #667eea; margin-bottom: 15px;">🔌 连接状态</h2>
+            <div class="state-item">
+                <span class="state-label">钱包连接:</span>
+                <span class="state-value" id="walletConnection">未连接</span>
+            </div>
+            <div class="state-item">
+                <span class="state-label">当前账户:</span>
+                <span class="state-value" id="currentAccount">-</span>
+            </div>
+            <div class="state-item">
+                <span class="state-label">网络:</span>
+                <span class="state-value" id="network">-</span>
+            </div>
+            <button class="btn-primary" id="connectBtn" onclick="connectWallet()">连接 MetaMask</button>
+        </div>
+
+        <!-- Configuration -->
+        <div class="card full-width">
+            <h2>⚙️ 合约配置</h2>
+            <div class="info-box">
+                <strong>📝 说明:</strong> 部署合约后，在下方填入合约地址
+            </div>
+            <div class="input-group">
+                <label>MultiSigWallet 合约地址:</label>
+                <input type="text" id="walletAddress" placeholder="0x...">
+            </div>
+            <div class="input-group">
+                <label>MockERC20 代币地址:</label>
+                <input type="text" id="tokenAddress" placeholder="0x...">
+            </div>
+            <button class="btn-success" onclick="loadContracts()">加载合约</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-grid">
+            <!-- Left Column: Wallet State -->
+            <div class="card">
+                <h2>💼 钱包状态</h2>
+
+                <h3>钱包基本信息</h3>
+                <div class="state-item">
+                    <span class="state-label">所有者数量:</span>
+                    <span class="state-value" id="ownerCount">-</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">所需签名:</span>
+                    <span class="state-value" id="requiredSigs">-</span>
+                </div>
+                <div class="state-item">
+                    <span class="state-label">交易总数:</span>
+                    <span class="state-value" id="txCount">-</span>
+                </div>
+
+                <h3>代币余额</h3>
+                <div class="balance-display">
+                    <div class="balance-item">
+                        <div class="balance-label">钱包</div>
+                        <div class="balance-value" id="walletBalance">-</div>
+                        <div class="balance-label">MTK</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="balance-label">当前账户</div>
+                        <div class="balance-value" id="userBalance">-</div>
+                        <div class="balance-label">MTK</div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="refreshState()">🔄 刷新状态</button>
+            </div>
+
+            <!-- Right Column: Transaction Operations -->
+            <div class="card">
+                <h2>💰 交易操作</h2>
+
+                <h3>提交新交易</h3>
+                <div class="input-group">
+                    <label>接收地址:</label>
+                    <input type="text" id="recipientAddress" placeholder="0x...">
+                </div>
+                <div class="input-group">
+                    <label>转账金额 (MTK):</label>
+                    <input type="number" id="transferAmount" placeholder="100" value="100">
+                </div>
+                <button class="btn-success" onclick="submitTransaction()">📤 提交交易</button>
+
+                <h3>查询交易</h3>
+                <div class="input-group">
+                    <label>交易 ID:</label>
+                    <input type="number" id="queryTxId" placeholder="0" value="0">
+                </div>
+                <button class="btn-primary" onclick="queryTransaction()">🔍 查询交易</button>
+
+                <div id="txDetails" class="transaction-details" style="display: none;">
+                    <p><strong>交易详情:</strong></p>
+                    <p><strong>接收地址:</strong> <span id="detailTo"></span></p>
+                    <p><strong>金额:</strong> <span id="detailValue"></span> MTK</p>
+                    <p><strong>确认数:</strong> <span id="detailConfirmations"></span></p>
+                    <p><strong>已执行:</strong> <span id="detailExecuted"></span></p>
+                    <p><strong>可执行:</strong> <span id="detailReady"></span></p>
+                </div>
+            </div>
+
+            <!-- Confirmation Process -->
+            <div class="card full-width">
+                <h2>✍️ 确认 & 执行</h2>
+
+                <div class="input-group">
+                    <label>选择交易 ID:</label>
+                    <input type="number" id="actionTxId" placeholder="0" value="0">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <button class="btn-success" onclick="confirmTx()">✅ 确认交易</button>
+                    <button class="btn-danger" onclick="revokeTx()">❌ 撤销确认</button>
+                    <button class="btn-warning" onclick="executeTx()">⚡ 执行交易</button>
+                </div>
+
+                <div id="thresholdNotification" class="notification warning" style="display: none;">
+                    <strong>🔔 通知:</strong> <span id="notificationText"></span>
+                </div>
+            </div>
+
+            <!-- Event Log -->
+            <div class="card full-width">
+                <h2>📝 事件日志</h2>
+                <button class="btn-primary" onclick="clearLog()">🗑️ 清空日志</button>
+                <div id="eventLog" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+                    <div style="color: #999; text-align: center; padding: 20px;">
+                        等待事件...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contract ABIs
+        const MULTISIG_ABI = [
+            "function owners(uint256) view returns (address)",
+            "function required() view returns (uint256)",
+            "function getOwners() view returns (address[])",
+            "function getTransactionCount() view returns (uint256)",
+            "function getTransaction(uint256) view returns (address token, address to, uint256 value, bytes data, bool executed, uint256 numConfirmations)",
+            "function isTransactionReady(uint256) view returns (bool)",
+            "function getConfirmations(uint256) view returns (address[])",
+            "function submitTransaction(address token, address to, uint256 value, bytes data)",
+            "function confirmTransaction(uint256 txId)",
+            "function revokeConfirmation(uint256 txId)",
+            "function executeTransaction(uint256 txId)",
+            "event SubmitTransaction(uint256 indexed txId, address indexed token, address indexed to, uint256 value, bytes data)",
+            "event ConfirmTransaction(address indexed owner, uint256 indexed txId)",
+            "event RevokeConfirmation(address indexed owner, uint256 indexed txId)",
+            "event ExecuteTransaction(uint256 indexed txId)",
+            "event ConfirmationThresholdReached(uint256 indexed txId, uint256 numConfirmations)"
+        ];
+
+        const ERC20_ABI = [
+            "function name() view returns (string)",
+            "function symbol() view returns (string)",
+            "function balanceOf(address) view returns (uint256)",
+            "function transfer(address to, uint256 amount) returns (bool)",
+            "function mint(address to, uint256 amount)"
+        ];
+
+        // Global state
+        let provider;
+        let signer;
+        let currentAccount;
+        let walletContract;
+        let tokenContract;
+        let eventLog = [];
+
+        // Initialize
+        window.addEventListener('load', () => {
+            addLog('系统', 'Web3 dApp 已加载，请连接 MetaMask');
+
+            // Check if MetaMask is installed
+            if (typeof window.ethereum !== 'undefined') {
+                addLog('系统', '检测到 MetaMask 扩展');
+            } else {
+                addLog('错误', '未检测到 MetaMask，请安装 MetaMask 扩展');
+            }
+        });
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    // Show installation guide
+                    const installMsg = `🦊 未检测到 MetaMask 钱包扩展！\n\n` +
+                        `MetaMask 是一个浏览器扩展，用于连接区块链应用。\n\n` +
+                        `请按照以下步骤安装：\n\n` +
+                        `1. 访问 MetaMask 官网: https://metamask.io/\n` +
+                        `2. 点击 "Download" 下载适合你浏览器的版本\n` +
+                        `3. 安装完成后，刷新此页面\n\n` +
+                        `支持的浏览器: Chrome, Firefox, Brave, Edge`;
+                    alert(installMsg);
+                    addLog('错误', '未安装 MetaMask，请访问 https://metamask.io/ 下载安装');
+                    // Open MetaMask download page
+                    window.open('https://metamask.io/download/', '_blank');
+                    return;
+                }
+
+                // Request account access
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                currentAccount = await signer.getAddress();
+
+                // Get network
+                const network = await provider.getNetwork();
+
+                // Update UI
+                document.getElementById('walletConnection').textContent = '✅ 已连接';
+                document.getElementById('currentAccount').textContent = currentAccount;
+                document.getElementById('network').textContent = `${network.name} (Chain ID: ${network.chainId})`;
+                document.getElementById('connectBtn').textContent = '✅ 已连接';
+                document.getElementById('connectBtn').disabled = true;
+
+                addLog('连接', `已连接账户: ${currentAccount}`);
+                addLog('网络', `${network.name} (Chain ID: ${network.chainId})`);
+
+                // Listen for account changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length === 0) {
+                        addLog('断开', '账户已断开');
+                        location.reload();
+                    } else {
+                        currentAccount = accounts[0];
+                        document.getElementById('currentAccount').textContent = currentAccount;
+                        addLog('切换', `切换到账户: ${currentAccount}`);
+                        refreshState();
+                    }
+                });
+
+                // Listen for chain changes
+                window.ethereum.on('chainChanged', () => {
+                    location.reload();
+                });
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `连接失败: ${error.message}`);
+                alert('连接 MetaMask 失败: ' + error.message);
+            }
+        }
+
+        async function loadContracts() {
+            try {
+                if (!signer) {
+                    alert('请先连接 MetaMask');
+                    return;
+                }
+
+                const walletAddr = document.getElementById('walletAddress').value.trim();
+                const tokenAddr = document.getElementById('tokenAddress').value.trim();
+
+                if (!walletAddr || !tokenAddr) {
+                    alert('请填入合约地址');
+                    return;
+                }
+
+                // Load contracts
+                walletContract = new ethers.Contract(walletAddr, MULTISIG_ABI, signer);
+                tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+
+                addLog('合约', `MultiSigWallet 已加载: ${walletAddr}`);
+                addLog('合约', `MockERC20 已加载: ${tokenAddr}`);
+
+                // Setup event listeners
+                setupEventListeners();
+
+                // Refresh state
+                await refreshState();
+
+                alert('合约加载成功！');
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `加载合约失败: ${error.message}`);
+                alert('加载合约失败: ' + error.message);
+            }
+        }
+
+        function setupEventListeners() {
+            // Listen for ConfirmationThresholdReached event
+            walletContract.on("ConfirmationThresholdReached", (txId, numConfirmations) => {
+                addLog('事件', `🔔 交易 #${txId} 已达到阈值! (${numConfirmations} 个确认)`);
+                showNotification(`交易 #${txId} 已达到阈值，可以执行了！`);
+                refreshState();
+            });
+
+            // Listen for other events
+            walletContract.on("SubmitTransaction", (txId, token, to, value, data) => {
+                addLog('事件', `提交交易 #${txId} (发送 ${ethers.utils.formatEther(value)} MTK 到 ${to})`);
+                refreshState();
+            });
+
+            walletContract.on("ConfirmTransaction", (owner, txId) => {
+                addLog('事件', `${owner} 确认了交易 #${txId}`);
+                refreshState();
+            });
+
+            walletContract.on("RevokeConfirmation", (owner, txId) => {
+                addLog('事件', `${owner} 撤销了交易 #${txId} 的确认`);
+                refreshState();
+            });
+
+            walletContract.on("ExecuteTransaction", (txId) => {
+                addLog('事件', `✅ 交易 #${txId} 已执行`);
+                refreshState();
+            });
+        }
+
+        async function refreshState() {
+            try {
+                if (!walletContract || !tokenContract) {
+                    return;
+                }
+
+                // Get wallet info
+                const owners = await walletContract.getOwners();
+                const required = await walletContract.required();
+                const txCount = await walletContract.getTransactionCount();
+
+                document.getElementById('ownerCount').textContent = owners.length;
+                document.getElementById('requiredSigs').textContent = `${required} of ${owners.length}`;
+                document.getElementById('txCount').textContent = txCount.toString();
+
+                // Get balances
+                const walletBalance = await tokenContract.balanceOf(walletContract.address);
+                const userBalance = await tokenContract.balanceOf(currentAccount);
+
+                document.getElementById('walletBalance').textContent = ethers.utils.formatEther(walletBalance);
+                document.getElementById('userBalance').textContent = ethers.utils.formatEther(userBalance);
+
+                addLog('刷新', '状态已更新');
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `刷新状态失败: ${error.message}`);
+            }
+        }
+
+        async function submitTransaction() {
+            try {
+                if (!walletContract || !tokenContract) {
+                    alert('请先加载合约');
+                    return;
+                }
+
+                const recipient = document.getElementById('recipientAddress').value.trim();
+                const amount = document.getElementById('transferAmount').value;
+
+                if (!recipient || !amount) {
+                    alert('请填写接收地址和金额');
+                    return;
+                }
+
+                addLog('提交', '正在提交交易...');
+
+                const amountWei = ethers.utils.parseEther(amount);
+                const tx = await walletContract.submitTransaction(
+                    tokenContract.address,
+                    recipient,
+                    amountWei,
+                    "0x"
+                );
+
+                addLog('交易', `交易哈希: ${tx.hash}`);
+
+                const receipt = await tx.wait();
+                addLog('成功', '交易已提交！');
+
+                await refreshState();
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `提交失败: ${error.message}`);
+                alert('提交交易失败: ' + error.message);
+            }
+        }
+
+        async function queryTransaction() {
+            try {
+                if (!walletContract) {
+                    alert('请先加载合约');
+                    return;
+                }
+
+                const txId = document.getElementById('queryTxId').value;
+
+                const tx = await walletContract.getTransaction(txId);
+                const isReady = await walletContract.isTransactionReady(txId);
+
+                document.getElementById('detailTo').textContent = tx.to;
+                document.getElementById('detailValue').textContent = ethers.utils.formatEther(tx.value);
+                document.getElementById('detailConfirmations').textContent = tx.numConfirmations.toString();
+                document.getElementById('detailExecuted').textContent = tx.executed ? '✅ 是' : '❌ 否';
+                document.getElementById('detailReady').textContent = isReady ? '✅ 是' : '❌ 否';
+
+                document.getElementById('txDetails').style.display = 'block';
+
+                addLog('查询', `交易 #${txId} 详情已显示`);
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `查询失败: ${error.message}`);
+                alert('查询交易失败: ' + error.message);
+            }
+        }
+
+        async function confirmTx() {
+            try {
+                if (!walletContract) {
+                    alert('请先加载合约');
+                    return;
+                }
+
+                const txId = document.getElementById('actionTxId').value;
+
+                addLog('确认', `正在确认交易 #${txId}...`);
+
+                const tx = await walletContract.confirmTransaction(txId);
+                addLog('交易', `交易哈希: ${tx.hash}`);
+
+                await tx.wait();
+                addLog('成功', `交易 #${txId} 已确认！`);
+
+                await refreshState();
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `确认失败: ${error.message}`);
+                alert('确认交易失败: ' + error.message);
+            }
+        }
+
+        async function revokeTx() {
+            try {
+                if (!walletContract) {
+                    alert('请先加载合约');
+                    return;
+                }
+
+                const txId = document.getElementById('actionTxId').value;
+
+                addLog('撤销', `正在撤销交易 #${txId} 的确认...`);
+
+                const tx = await walletContract.revokeConfirmation(txId);
+                addLog('交易', `交易哈希: ${tx.hash}`);
+
+                await tx.wait();
+                addLog('成功', `交易 #${txId} 的确认已撤销！`);
+
+                await refreshState();
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `撤销失败: ${error.message}`);
+                alert('撤销确认失败: ' + error.message);
+            }
+        }
+
+        async function executeTx() {
+            try {
+                if (!walletContract) {
+                    alert('请先加载合约');
+                    return;
+                }
+
+                const txId = document.getElementById('actionTxId').value;
+
+                addLog('执行', `正在执行交易 #${txId}...`);
+
+                const tx = await walletContract.executeTransaction(txId);
+                addLog('交易', `交易哈希: ${tx.hash}`);
+
+                await tx.wait();
+                addLog('成功', `✅ 交易 #${txId} 已执行！`);
+
+                await refreshState();
+
+            } catch (error) {
+                console.error(error);
+                addLog('错误', `执行失败: ${error.message}`);
+                alert('执行交易失败: ' + error.message);
+            }
+        }
+
+        function addLog(action, details) {
+            const timestamp = new Date().toLocaleTimeString('zh-CN');
+            eventLog.unshift(`[${timestamp}] ${action}: ${details}`);
+            updateEventLog();
+        }
+
+        function updateEventLog() {
+            const logDiv = document.getElementById('eventLog');
+            if (eventLog.length === 0) {
+                logDiv.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">等待事件...</div>';
+            } else {
+                logDiv.innerHTML = eventLog.map(e =>
+                    `<div style="padding: 8px; border-bottom: 1px solid #eee; font-family: monospace; font-size: 0.9em;">${e}</div>`
+                ).join('');
+            }
+        }
+
+        function clearLog() {
+            eventLog = [];
+            updateEventLog();
+        }
+
+        function showNotification(message) {
+            const notif = document.getElementById('thresholdNotification');
+            document.getElementById('notificationText').textContent = message;
+            notif.style.display = 'block';
+
+            setTimeout(() => {
+                notif.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
