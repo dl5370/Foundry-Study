@@ -1,0 +1,60 @@
+name: Foundry Tests & Build
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main, feature/* ]
+
+jobs:
+  test:
+    name: Foundry Tests & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Build contracts
+        run: forge build --via-ir
+        working-directory: ./
+
+      - name: Run tests
+        run: forge test -vv
+        working-directory: ./
+
+      - name: Run format check
+        run: forge fmt --check
+        working-directory: ./
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: forge-build
+          path: out/
+          retention-days: 30
+
+  deploy-script:
+    name: Validate Deployment Script
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Validate deployment script syntax
+        run: forge script script/DeployMultiSig.s.sol --dry-run
+        working-directory: ./
+        continue-on-error: true

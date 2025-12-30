@@ -43,18 +43,93 @@ start docs/MultiSigWallet_Simulator.html
 
 ```
 foundry-web3-study/
-├── src/                 # 智能合约源代码
-├── test/                # 测试文件
-├── script/              # 部署脚本
-├── lib/                 # 依赖库
-├── foundry.toml         # Foundry 配置文件
-├── package.json         # Node.js 项目配置
-└── README.md           # 项目文档
+├── src/                           # 智能合约源代码
+├── test/                          # 测试文件
+├── script/                        # 部署脚本
+│   └── DeployMultiSig.s.sol      # 多签钱包部署脚本
+├── lib/                           # 依赖库
+├── docs/                          # 文档和前端
+│   ├── MultiSigWallet_Simulator.html      # 模拟器
+│   └── MultiSigWallet_Web3.html           # Web3 dApp（实时合约交互）
+├── .github/
+│   └── workflows/
+│       └── foundry.yml            # GitHub Actions CI/CD 配置
+├── Dockerfile                     # Docker 开发环境
+├── docker-compose.yml             # Docker Compose 编排
+├── foundry.toml                   # Foundry 配置文件
+├── package.json                   # Node.js 项目配置
+└── README.md                      # 项目文档
 ```
 
-## 快速开始
+## 🚀 快速开始（三种方式）
 
-### 1. 安装 Foundry
+选择最适合你的方式开始开发：
+
+### 方式 1️⃣：GitHub Codespaces（推荐新人，零配置）
+
+最简单的方式，无需安装任何东西！
+
+1. 在本仓库首页点击 `Code` 按钮
+2. 点击 `Codespaces` 选项卡
+3. 点击 `Create codespace on feature/realCallSol`
+4. 等待环境初始化（约 2 分钟）
+5. 在终端中运行：
+
+```bash
+# 编译合约
+forge build
+
+# 运行测试
+forge test
+
+# 启动本地区块链
+anvil
+```
+
+**优点**：✅ 零配置 | ✅ 浏览器中开发 | ✅ 免费额度充足
+
+---
+
+### 方式 2️⃣：Docker（推荐团队开发）
+
+需要安装 Docker 和 Docker Compose，但完全避免本地环境配置。
+
+**安装 Docker**（如果还没有）：
+- [Docker Desktop - macOS/Windows](https://www.docker.com/products/docker-desktop)
+- [Docker - Linux](https://docs.docker.com/engine/install/)
+
+**启动开发环境**：
+
+```bash
+# 选项 A：仅启动开发容器
+docker-compose run foundry-dev bash
+
+# 选项 B：同时启动开发容器和 Anvil 区块链节点
+docker-compose up
+```
+
+**在容器中运行命令**：
+
+```bash
+# 编译合约
+forge build
+
+# 运行测试
+forge test
+
+# 部署到 Anvil（如果启用了 anvil 服务）
+forge script script/DeployMultiSig.s.sol --rpc-url http://anvil:8545 --broadcast
+```
+
+**优点**：✅ 一致的开发环境 | ✅ 适合团队 | ✅ 易于扩展
+
+---
+
+### 方式 3️⃣：本地安装（高级开发者）
+
+需要在本地安装 Rust 和 Foundry。
+
+#### 1. 安装 Foundry
 
 如果还没有安装 Foundry，请运行：
 
@@ -63,19 +138,19 @@ curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-### 2. 安装依赖
+#### 2. 安装依赖
 
 ```bash
 forge install
 ```
 
-### 3. 编译合约
+#### 3. 编译合约
 
 ```bash
 forge build
 ```
 
-### 4. 运行测试
+#### 4. 运行测试
 
 ```bash
 # 运行所有测试
@@ -91,7 +166,7 @@ forge test --gas-report
 forge test --match-test testFuzz
 ```
 
-### 5. 本地开发（可选）
+#### 5. 本地开发（可选）
 
 启动本地 Anvil 节点：
 
@@ -102,10 +177,10 @@ anvil
 在另一个终端部署合约：
 
 ```bash
-forge script script/Deploy.s.sol:Deploy --rpc-url localhost --broadcast
+forge script script/DeployMultiSig.s.sol --rpc-url localhost --broadcast
 ```
 
-### 6. 部署到测试网
+#### 6. 部署到测试网
 
 设置环境变量（Sepolia 示例）：
 
@@ -119,6 +194,22 @@ export PRIVATE_KEY="your_private_key"
 ```bash
 forge script script/Deploy.s.sol:Deploy --rpc-url sepolia --broadcast --verify
 ```
+
+---
+
+## 📋 CI/CD 自动化
+
+本项目配置了 **GitHub Actions**，会自动在以下情况运行：
+
+- 💾 **推送代码** - 自动运行测试和编译
+- 📝 **提交 PR** - 自动验证代码质量
+- ✅ **检查内容**：
+  - 编译合约
+  - 运行测试
+  - 检查代码格式
+  - 验证部署脚本
+
+你可以在 **Actions** 标签页查看执行结果。
 
 ## 项目文件说明
 
