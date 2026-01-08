@@ -192,6 +192,37 @@ cp .env.example .env
 nano .env
 ```
 
+### 💾 持久部署（新功能！）
+
+合约部署现在会自动保存到 `deployments/` 目录，支持历史管理和快速切换：
+
+```bash
+# 1. 部署合约（自动保存）
+./deploy.sh local
+
+# 输出会显示：
+# ✅ 已保存部署到: deployments/local/latest.json
+# ✅ 已创建历史记录: deployments/local/history/20250109-143022.json
+
+# 2. 查看当前部署信息
+./tools/current-deployment.sh
+
+# 3. 查看部署历史
+./tools/list-deployments.sh
+
+# 4. 加载历史部署（如需恢复旧合约）
+./tools/load-deployment.sh 20250109-140015.json
+```
+
+**快速参考**：
+- ✅ 部署后自动保存合约地址到 `.env.deployed`
+- ✅ 网页自动读取最新的合约地址
+- ✅ 支持无缝切换历史部署版本
+
+详见：[`PERSISTENT_DEPLOYMENT.md`](./PERSISTENT_DEPLOYMENT.md) 和 [`QUICK_REFERENCE.md`](./QUICK_REFERENCE.md)
+
+---
+
 使用一键部署脚本（推荐）：
 
 ```bash

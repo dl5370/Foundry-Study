@@ -191,6 +191,69 @@ start_local_node() {
     fi
 }
 
+# 保存部署记录到持久化目录
+save_deployment_record() {
+    local network=$1
+    local source_file="broadcast/DeployMultiSig.s.sol/31337/run-latest.json"
+    local deploy_dir="deployments/$network"
+    local latest_file="$deploy_dir/latest.json"
+    local timestamp=$(date '+%Y%m%d-%H%M%S')
+    local history_dir="$deploy_dir/history"
+    local history_file="$history_dir/$timestamp.json"
+
+    # 创建目录
+    mkdir -p "$history_dir"
+
+    # 复制到最新部署
+    cp "$source_file" "$latest_file"
+    print_success "已保存部署到: $latest_file"
+
+    # 创建历史副本
+    cp "$source_file" "$history_file"
+    print_info "已创建历史记录: $history_file"
+
+    # 提取合约地址
+    local multisig_addr=$(jq -r '.transactions[] | select(.contractName=="MultiSigWallet") | .contractAddress' "$latest_file" | head -1)
+    local token_addr=$(jq -r '.transactions[] | select(.contractName=="MockERC20") | .contractAddress' "$latest_file" | head -1)
+    local block_num=$(jq -r '.transactions[0].blockNumber' "$latest_file" 2>/dev/null || echo "0")
+
+    # 生成 .env.deployed 文件
+    cat > .env.deployed << EOF
+# =========================================
+# 当前活跃部署的合约地址
+# 由 deploy.sh 自动生成
+# 生成时间: $(date '+%Y-%m-%dT%H:%M:%SZ')
+# =========================================
+
+DEPLOYED_NETWORK=$network
+DEPLOYED_RPC_URL=http://localhost:8545
+
+MULTISIG_ADDRESS=$multisig_addr
+TOKEN_ADDRESS=$token_addr
+
+DEPLOYED_TIMESTAMP=$(date '+%Y-%m-%dT%H:%M:%SZ')
+DEPLOYED_BLOCK=$block_num
+
+OWNER_ALICE=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+OWNER_BOB=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+OWNER_CAROL=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+
+MULTISIG_REQUIRED_SIGNATURES=2
+MULTISIG_TOTAL_OWNERS=3
+TOKEN_INITIAL_SUPPLY=1000
+EOF
+
+    print_success "已更新 .env.deployed"
+    echo ""
+    echo "📦 已部署的合约:"
+    echo "  MultiSigWallet: $multisig_addr"
+    echo "  MockERC20: $token_addr"
+    echo ""
+    echo "💾 文件位置:"
+    echo "  当前部署: deployments/$network/latest.json"
+    echo "  历史记录: deployments/$network/history/$timestamp.json"
+}
+
 # 部署到本地
 deploy_local() {
     print_info "部署到本地 Anvil 节点..."
@@ -217,6 +280,10 @@ deploy_local() {
     if [ $? -eq 0 ]; then
         print_success "本地部署成功！"
         print_info "合约已部署到本地 Anvil 节点 (http://localhost:8545)"
+
+        # 保存部署记录到持久化目录
+        echo ""
+        save_deployment_record "local"
     else
         print_error "本地部署失败"
         exit 1

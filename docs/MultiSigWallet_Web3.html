@@ -4,7 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多签钱包 Web3 dApp - MultiSigWallet</title>
+    <!-- ethers.js 库 - 主 CDN + 备用 CDN -->
     <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script>
+        // 如果主 CDN 加载失败，使用备用 CDN
+        if (typeof ethers === 'undefined') {
+            console.warn('主 CDN 加载失败，尝试备用 CDN...');
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
+            script.onerror = function() {
+                console.error('所有 CDN 均加载失败，功能将受限');
+                document.body.innerHTML = '<div style="text-align: center; margin-top: 50px; font-size: 18px; color: red;"><p>⚠️ 库加载失败</p><p>无法加载 ethers.js 库，请检查网络连接</p></div>';
+            };
+            document.head.appendChild(script);
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -378,6 +392,8 @@
                 <span class="state-value" id="network">-</span>
             </div>
             <button class="btn-primary" id="connectBtn" onclick="connectWallet()">连接 MetaMask</button>
+            <button class="btn-secondary" id="retryBtn" onclick="retryDetectMetaMask()" style="margin-top: 10px; background: #f0f0f0; color: #333;">🔄 重新检查 MetaMask</button>
+            <button class="btn-secondary" id="diagBtn" onclick="runDiagnostics()" style="margin-top: 10px; background: #f0f0f0; color: #333;">🔧 运行诊断</button>
         </div>
 
         <!-- Configuration -->
@@ -536,47 +552,232 @@
         let tokenContract;
         let eventLog = [];
 
+        // Diagnostic function for debugging
+        function runDiagnostics() {
+            addLog('诊断', '=== 开始系统诊断 ===');
+
+            // 检查 ethers.js
+            if (typeof ethers !== 'undefined') {
+                addLog('诊断', '✅ ethers.js 库已加载');
+            } else {
+                addLog('诊断', '❌ ethers.js 库未加载（将尝试备用 CDN）');
+            }
+
+            // 检查 window.ethereum
+            if (typeof window.ethereum !== 'undefined') {
+                addLog('诊断', '✅ window.ethereum 对象已检测到');
+                addLog('诊断', `   - isMetaMask: ${window.ethereum.isMetaMask || 'N/A'}`);
+                addLog('诊断', `   - networkVersion: ${window.ethereum.networkVersion || 'N/A'}`);
+                addLog('诊断', `   - chainId: ${window.ethereum.chainId || 'N/A'}`);
+            } else {
+                addLog('诊断', '❌ window.ethereum 未检测到 - Chrome 可能阻止了 MetaMask 访问');
+                addLog('诊断', '   解决方案：');
+                addLog('诊断', '   1️⃣ 打开 Chrome 地址栏右侧的锁图标 🔒');
+                addLog('诊断', '   2️⃣ 点击"扩展程序访问权限"或"网站设置"');
+                addLog('诊断', '   3️⃣ 将 MetaMask 改为"允许此网站"或"启用"');
+                addLog('诊断', '   4️⃣ 刷新页面后重试');
+            }
+
+            // 检查浏览器
+            addLog('诊断', `浏览器: ${navigator.userAgent.split(' ').pop()}`);
+            addLog('诊断', '=== 诊断完成 ===');
+        }
+
         // Initialize
         window.addEventListener('load', () => {
-            addLog('系统', 'Web3 dApp 已加载，请连接 MetaMask');
+            addLog('系统', 'Web3 dApp 已加载，检查 MetaMask...');
 
-            // Check if MetaMask is installed
-            if (typeof window.ethereum !== 'undefined') {
-                addLog('系统', '检测到 MetaMask 扩展');
-            } else {
-                addLog('错误', '未检测到 MetaMask，请安装 MetaMask 扩展');
-            }
+            // Run diagnostics first
+            setTimeout(() => {
+                runDiagnostics();
+            }, 100);
+
+            // Check if MetaMask is installed with retry logic
+            checkMetaMaskWithRetry();
         });
 
-        async function connectWallet() {
-            try {
-                // Check 1: MetaMask installed?
-                if (typeof window.ethereum === 'undefined') {
-                    // Show installation guide
-                    const installMsg = `🦊 未检测到 MetaMask 钱包扩展！\n\n` +
-                        `MetaMask 是一个浏览器扩展，用于连接区块链应用。\n\n` +
-                        `请按照以下步骤安装：\n\n` +
-                        `1. 访问 MetaMask 官网: https://metamask.io/\n` +
-                        `2. 点击 "Download" 下载适合你浏览器的版本\n` +
-                        `3. 安装完成后，刷新此页面\n\n` +
-                        `支持的浏览器: Chrome, Firefox, Brave, Edge`;
-                    alert(installMsg);
-                    addLog('错误', '未安装 MetaMask，请访问 https://metamask.io/ 下载安装');
-                    // Open MetaMask download page
-                    window.open('https://metamask.io/download/', '_blank');
+        // Function to check MetaMask with extended retry logic
+        function checkMetaMaskWithRetry() {
+            let retryCount = 0;
+            const maxRetries = 3;
+            const delayMs = [0, 500, 1000];
+
+            function attemptCheck(attempt) {
+                if (typeof window.ethereum !== 'undefined') {
+                    addLog('系统', '✅ 检测到 MetaMask 扩展');
+
+                    // Auto-fill contract addresses
+                    document.getElementById('walletAddress').value = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+                    document.getElementById('tokenAddress').value = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+                    addLog('系统', '✅ 已自动填充合约地址');
                     return;
                 }
 
-                // Request account access - MetaMask will handle login/setup
+                if (attempt < maxRetries) {
+                    const nextDelay = delayMs[attempt + 1];
+                    addLog('系统', `⏳ MetaMask 检测中，请稍候... (${nextDelay}ms)`);
+
+                    setTimeout(() => {
+                        attemptCheck(attempt + 1);
+                    }, nextDelay);
+                } else {
+                    addLog('错误', '❌ 未检测到 MetaMask，请安装 MetaMask 扩展');
+                    addLog('提示', '💡 如果已安装 MetaMask，请点击"🔄 重新检查 MetaMask"按钮');
+                }
+            }
+
+            attemptCheck(0);
+        }
+
+        // Function to manually retry MetaMask detection with extended retries
+        function retryDetectMetaMask() {
+            addLog('系统', '正在重新检查 MetaMask（最多重试 5 次）...');
+            console.log('window.ethereum:', window.ethereum);
+            console.log('window.MetaMaskOnboarding:', typeof window.MetaMaskOnboarding);
+
+            let retryCount = 0;
+            const maxRetries = 5;
+            const delayMs = [0, 500, 1000, 2000, 3000]; // 累进延迟
+
+            function attemptDetection(attempt) {
+                retryCount = attempt;
+
+                // Direct check
+                if (typeof window.ethereum !== 'undefined') {
+                    addLog('成功', `✅ MetaMask 检测成功（第 ${attempt} 次尝试）`);
+                    completeMetaMaskDetection();
+                    return;
+                }
+
+                // Check isMetaMask property
+                if (window.ethereum?.isMetaMask) {
+                    addLog('成功', `✅ MetaMask 检测成功（第 ${attempt} 次尝试）`);
+                    completeMetaMaskDetection();
+                    return;
+                }
+
+                // Continue retrying if we haven't reached max retries
+                if (attempt < maxRetries) {
+                    const nextDelay = delayMs[attempt + 1];
+                    addLog('系统', `⏳ 等待 ${nextDelay}ms 后进行第 ${attempt + 2} 次尝试...`);
+                    console.log(`Attempt ${attempt + 1}/${maxRetries} - scheduling next attempt in ${nextDelay}ms`);
+
+                    setTimeout(() => {
+                        attemptDetection(attempt + 1);
+                    }, nextDelay);
+                } else {
+                    // All retries exhausted
+                    showMetaMaskNotFoundAlert();
+                }
+            }
+
+            // Start with first attempt
+            attemptDetection(0);
+        }
+
+        function completeMetaMaskDetection() {
+            addLog('成功', '✅ 检测到 MetaMask！');
+
+            // Auto-fill contract addresses
+            document.getElementById('walletAddress').value = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+            document.getElementById('tokenAddress').value = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+            addLog('系统', '✅ 已自动填充合约地址');
+
+            alert('✅ MetaMask 检测成功！\n\n现在请点击"连接 MetaMask"按钮连接你的钱包。');
+        }
+
+        function showMetaMaskNotFoundAlert() {
+            addLog('错误', '❌ 仍未检测到 MetaMask');
+
+            const debugInfo = `
+🆘 MetaMask 未检测到
+
+可能的原因：
+1. MetaMask 扩展被禁用了
+2. 浏览器阻止了 MetaMask 访问此网站
+3. MetaMask 未正确加载
+
+解决方案（按顺序尝试）：
+
+A. 检查 MetaMask 状态：
+   • 点击浏览器右上角的扩展图标 🧩
+   • 确保 MetaMask 是启用状态（不是灰色）
+   • 点击 MetaMask 图标确保钱包能打开
+
+B. 允许网站访问 MetaMask：
+   • 点击地址栏右侧的锁图标 🔒
+   • 选择"网站设置"
+   • 找到"扩展程序访问权限"
+   • 确保 MetaMask 改为"允许此网站"
+
+C. 如果还不行：
+   • 关闭浏览器所有 Chrome 窗口
+   • 重新打开浏览器
+   • 打开此网页
+   • 点击"重新检查 MetaMask"
+
+D. 最后方案：
+   • 禁用其他扩展（可能有冲突）
+   • 重新安装 MetaMask 扩展
+            `;
+
+            alert(debugInfo);
+        }
+
+        async function connectWallet() {
+            try {
+                // Check 1: MetaMask installed? (with retry)
+                if (typeof window.ethereum === 'undefined') {
+                    addLog('系统', '第一次检测未找到 MetaMask，进行延迟重试...');
+                    console.log('First check failed, retrying...');
+
+                    // Retry after a short delay
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    if (typeof window.ethereum === 'undefined') {
+                        // Still not found - show installation guide
+                        const installMsg = `🦊 未检测到 MetaMask 钱包扩展！\n\n` +
+                            `MetaMask 是一个浏览器扩展，用于连接区块链应用。\n\n` +
+                            `请按照以下步骤安装：\n\n` +
+                            `1. 访问 MetaMask 官网: https://metamask.io/\n` +
+                            `2. 点击 "Download" 下载适合你浏览器的版本\n` +
+                            `3. 安装完成后，刷新此页面\n\n` +
+                            `支持的浏览器: Chrome, Firefox, Brave, Edge`;
+                        alert(installMsg);
+                        addLog('错误', '未安装 MetaMask，请访问 https://metamask.io/ 下载安装');
+                        // Open MetaMask download page
+                        window.open('https://metamask.io/download/', '_blank');
+                        return;
+                    }
+                }
+
+                addLog('系统', '✅ 已确认检测到 MetaMask');
                 addLog('提示', '正在请求连接 MetaMask...');
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                console.log('MetaMask detected, requesting accounts...');
+
+                // Request account access - MetaMask will handle login/setup
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+                if (!accounts || accounts.length === 0) {
+                    addLog('错误', '未获得账户列表');
+                    alert('❌ 未获得账户信息\n\n请确保在 MetaMask 弹窗中选择了账户并点击"连接"。');
+                    return;
+                }
+
+                console.log('Accounts received:', accounts);
+                addLog('成功', `✅ 已获得账户: ${accounts[0]}`);
 
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
                 currentAccount = await signer.getAddress();
 
+                console.log('Current account:', currentAccount);
+                addLog('成功', `✅ 已连接到账户: ${currentAccount}`);
+
                 // Get network
                 const network = await provider.getNetwork();
+                console.log('Network:', network);
+                addLog('成功', `✅ 网络: ${network.name} (Chain ID: ${network.chainId})`);
 
                 // Update UI
                 document.getElementById('walletConnection').textContent = '✅ 已连接';
@@ -585,8 +786,14 @@
                 document.getElementById('connectBtn').textContent = '✅ 已连接';
                 document.getElementById('connectBtn').disabled = true;
 
-                addLog('连接', `已连接账户: ${currentAccount}`);
-                addLog('网络', `${network.name} (Chain ID: ${network.chainId})`);
+                addLog('连接', `✅ 已连接账户: ${currentAccount}`);
+                addLog('网络', `✅ ${network.name} (Chain ID: ${network.chainId})`);
+
+                // Auto-load contracts after connecting
+                setTimeout(() => {
+                    addLog('系统', '正在自动加载合约...');
+                    loadContracts();
+                }, 500);
 
                 // Listen for account changes
                 window.ethereum.on('accountsChanged', (accounts) => {
@@ -603,11 +810,12 @@
 
                 // Listen for chain changes
                 window.ethereum.on('chainChanged', () => {
+                    addLog('提示', '网络已改变，正在重新加载...');
                     location.reload();
                 });
 
             } catch (error) {
-                console.error(error);
+                console.error('Connection error:', error);
 
                 // Handle different error cases
                 if (error.code === 4001) {
