@@ -123,27 +123,130 @@ make security      # 安全检查
 
 ---
 
+## 📝 配置环境变量
+
+在部署到测试网之前，需要配置环境变量来存储敏感信息（API Key、私钥等）。
+
+### 第一次配置
+
+```bash
+# 1. 从模板创建配置文件
+cp .env.example .env
+
+# 2. 编辑 .env 文件（使用你喜欢的编辑器）
+nano .env
+
+# 3. 填入以下信息：
+#    - ALCHEMY_API_KEY: 从 https://www.alchemy.com/ 获取
+#    - PRIVATE_KEY: 你的钱包私钥（不含 0x 前缀）
+#    - ETHERSCAN_API_KEY: 从 https://etherscan.io/myapikey 获取（可选，用于合约验证）
+```
+
+### 自动配置（推荐）
+
+如果 `.env` 文件不存在，`deploy.sh` 会自动提示你创建：
+
+```bash
+./deploy.sh sepolia
+
+# 脚本会提示：
+# 是否从 .env.example 创建 .env 文件? (y/n): y
+# .env 文件已创建
+# 请编辑 .env 文件，填入你的实际配置：
+#   ALCHEMY_API_KEY - Alchemy API 密钥
+#   PRIVATE_KEY - 部署账户私钥
+#   ETHERSCAN_API_KEY - Etherscan API 密钥（用于验证合约）
+```
+
+### 安全提示
+
+⚠️ **重要安全措施**：
+
+- ✅ `.env` 文件已在 `.gitignore` 中，**不会被提交到 git**
+- ✅ **永远不要在版本控制中提交真实的私钥和 API Key**
+- ✅ 使用**测试网账户**进行开发，不要使用主网账户
+- ✅ 定期**轮换 API Key**
+- ✅ 对于生产环境，考虑使用**硬件钱包**
+
+### 各配置项说明
+
+| 配置项 | 说明 | 获取方式 |
+|--------|------|---------|
+| `ALCHEMY_API_KEY` | 以太坊网络 RPC 访问密钥 | https://www.alchemy.com/ |
+| `PRIVATE_KEY` | 部署账户的私钥 | MetaMask、Hardhat 等钱包导出 |
+| `ETHERSCAN_API_KEY` | 合约验证密钥（可选） | https://etherscan.io/myapikey |
+| `OPTIMIZER_ENABLED` | 是否启用 Solidity 优化器 | true/false |
+| `OPTIMIZER_RUNS` | 优化运行次数 | 200（默认） |
+
+---
+
+
+
 ## 🌐 部署到测试网（Sepolia）
 
 ### 前置条件
 
-1. 获取 Alchemy API Key：https://www.alchemy.com/
-2. 生成私钥（确保账户有测试网 ETH）
+1. ✅ 已配置 `.env` 文件（参见上面的"配置环境变量"章节）
+2. ✅ 获取 Alchemy API Key：https://www.alchemy.com/
+3. ✅ 生成私钥并获取测试网 ETH：https://sepoliafaucet.com/
 
-### 部署步骤
+### 一键部署（推荐）
+
+使用 `deploy.sh` 脚本自动完成所有步骤：
 
 ```bash
-# 方式 1：使用 Makefile
-export PRIVATE_KEY="your_private_key"
-export ALCHEMY_API_KEY="your_alchemy_api_key"
-make deploy-sepolia
+# 使用 deploy.sh（会自动检查 .env 配置）
+./deploy.sh sepolia
 
-# 方式 2：直接使用 forge 命令
-forge script script/Deploy.s.sol:Deploy \
+# 脚本会自动：
+# 1. ✅ 检查 .env 文件是否存在
+# 2. ✅ 验证必需的环境变量（ALCHEMY_API_KEY, PRIVATE_KEY）
+# 3. ✅ 编译合约
+# 4. ✅ 运行测试确保代码正常
+# 5. ✅ 部署到 Sepolia 测试网
+# 6. ✅ 自动验证合约（如果配置了 ETHERSCAN_API_KEY）
+```
+
+### 使用 Makefile
+
+```bash
+# 更简洁的方式
+make deploy-sepolia
+```
+
+### 手动部署
+
+如果你想手动控制部署流程：
+
+```bash
+# 1. 加载环境变量
+source .env
+
+# 2. 检查 .env 中的变量是否正确
+echo $ALCHEMY_API_KEY
+echo $PRIVATE_KEY
+
+# 3. 部署并验证
+forge script script/DeployMultiSig.s.sol:DeployMultiSig \
   --rpc-url sepolia \
   --broadcast \
   --verify \
   --private-key $PRIVATE_KEY
+```
+
+### 部署后
+
+部署完成后，你可以：
+
+```bash
+# 查看部署记录
+cat broadcast/DeployMultiSig.s.sol/11155111/run-latest.json
+
+# 在 Sepolia Etherscan 上查看合约
+# https://sepolia.etherscan.io/address/<CONTRACT_ADDRESS>
+
+# 与合约交互
+cast call <CONTRACT_ADDRESS> "getOwners()(address[])" --rpc-url sepolia
 ```
 
 ---

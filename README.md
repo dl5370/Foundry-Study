@@ -182,17 +182,34 @@ forge script script/DeployMultiSig.s.sol --rpc-url localhost --broadcast
 
 #### 6. 部署到测试网
 
-设置环境变量（Sepolia 示例）：
+首先配置环境变量：
 
 ```bash
-export ALCHEMY_API_KEY="your_alchemy_api_key"
-export PRIVATE_KEY="your_private_key"
+# 第一次需要创建 .env 文件
+cp .env.example .env
+
+# 编辑配置文件（填入你的实际值）
+nano .env
 ```
 
-部署合约：
+使用一键部署脚本（推荐）：
 
 ```bash
-forge script script/Deploy.s.sol:Deploy --rpc-url sepolia --broadcast --verify
+# 部署到 Sepolia（自动检查 .env 配置）
+./deploy.sh sepolia
+
+# 脚本会自动：
+# 1. 检查 .env 文件
+# 2. 验证必需的环境变量
+# 3. 运行测试
+# 4. 部署合约
+# 5. 验证合约（如果配置了 Etherscan API Key）
+```
+
+或使用 Makefile：
+
+```bash
+make deploy-sepolia
 ```
 
 ---

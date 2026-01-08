@@ -37,6 +37,79 @@ print_header() {
     echo -e "${NC}"
 }
 
+# 加载环境变量
+load_env() {
+    local env_file=".env"
+
+    if [ -f "$env_file" ]; then
+        print_info "加载环境变量从 $env_file"
+        set -a  # 自动导出所有变量
+        source "$env_file"
+        set +a
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 检查 .env 文件
+check_env_file() {
+    if [ ! -f ".env" ]; then
+        print_warning ".env 文件不存在"
+
+        if [ -f ".env.example" ]; then
+            print_info "发现 .env.example 模板文件"
+            echo ""
+            read -p "是否从 .env.example 创建 .env 文件? (y/n): " -n 1 -r
+            echo ""
+
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                cp .env.example .env
+                print_success ".env 文件已创建"
+                print_warning "请编辑 .env 文件，填入你的实际配置："
+                echo "  ALCHEMY_API_KEY - Alchemy API 密钥"
+                echo "  PRIVATE_KEY - 部署账户私钥"
+                echo "  ETHERSCAN_API_KEY - Etherscan API 密钥（用于验证合约）"
+                echo ""
+                echo "编辑命令："
+                echo "  nano .env    # 或使用你喜欢的编辑器"
+                echo ""
+                exit 1
+            else
+                print_error "需要 .env 文件才能继续"
+                exit 1
+            fi
+        else
+            print_error "未找到 .env.example 模板文件"
+            exit 1
+        fi
+    fi
+}
+
+# 验证环境变量
+validate_env_vars() {
+    local required_vars=("$@")
+    local missing_vars=()
+
+    for var in "${required_vars[@]}"; do
+        if [ -z "${!var}" ]; then
+            missing_vars+=("$var")
+        fi
+    done
+
+    if [ ${#missing_vars[@]} -gt 0 ]; then
+        print_error "缺少必需的环境变量："
+        for var in "${missing_vars[@]}"; do
+            echo "  - $var"
+        done
+        echo ""
+        print_info "请编辑 .env 文件并填入这些变量的值"
+        exit 1
+    fi
+
+    print_success "环境变量验证通过"
+}
+
 # 检查依赖
 check_dependencies() {
     print_info "检查依赖..."
@@ -150,6 +223,73 @@ deploy_local() {
     fi
 }
 
+# 部署到 Sepolia 测试网
+deploy_sepolia() {
+    print_info "部署到 Sepolia 测试网..."
+
+    # 检查并加载 .env
+    check_env_file
+    load_env
+
+    # 验证必需的环境变量
+    validate_env_vars "ALCHEMY_API_KEY" "PRIVATE_KEY"
+
+    # 检查部署脚本
+    if [ -f "script/DeployMultiSig.s.sol" ]; then
+        DEPLOY_SCRIPT="script/DeployMultiSig.s.sol"
+        CONTRACT_NAME="DeployMultiSig"
+    elif [ -f "script/Deploy.s.sol" ]; then
+        DEPLOY_SCRIPT="script/Deploy.s.sol"
+        CONTRACT_NAME="Deploy"
+    else
+        print_error "未找到部署脚本"
+        exit 1
+    fi
+
+    print_info "使用部署脚本: $DEPLOY_SCRIPT"
+    print_info "目标网络: Sepolia Testnet"
+    echo ""
+    print_warning "请确认："
+    echo "  1. 你的账户有足够的 Sepolia 测试网 ETH"
+    echo "  2. PRIVATE_KEY 对应的账户是你想要使用的"
+    echo "  3. 部署将消耗真实的测试网 gas"
+    echo ""
+    read -p "继续部署到 Sepolia? (y/n): " -n 1 -r
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_warning "已取消部署"
+        exit 0
+    fi
+
+    print_info "开始部署..."
+
+    # 使用 --verify 自动验证合约（如果设置了 ETHERSCAN_API_KEY）
+    local verify_flag=""
+    if [ -n "$ETHERSCAN_API_KEY" ]; then
+        verify_flag="--verify"
+        print_info "将自动验证合约（Etherscan API Key 已设置）"
+    fi
+
+    forge script $DEPLOY_SCRIPT:$CONTRACT_NAME \
+        --rpc-url sepolia \
+        --broadcast \
+        --private-key $PRIVATE_KEY \
+        $verify_flag
+
+    if [ $? -eq 0 ]; then
+        print_success "Sepolia 部署成功！"
+        print_info "部署信息已保存到: broadcast/"
+        echo ""
+        print_info "查看你的合约："
+        echo "  Sepolia Etherscan: https://sepolia.etherscan.io/"
+        echo "  部署记录: broadcast/$CONTRACT_NAME.s.sol/11155111/run-latest.json"
+    else
+        print_error "Sepolia 部署失败"
+        exit 1
+    fi
+}
+
 # 显示部署信息
 show_deployment_info() {
     print_header
@@ -191,8 +331,10 @@ cleanup() {
 main() {
     print_header
 
-    # 设置清理陷阱
-    trap cleanup EXIT
+    # 设置清理陷阱（仅对本地部署）
+    if [ "${1:-local}" == "local" ]; then
+        trap cleanup EXIT
+    fi
 
     # 检查参数
     case "${1:-local}" in
@@ -205,6 +347,14 @@ main() {
             start_local_node
             deploy_local
             show_deployment_info
+            ;;
+        "sepolia")
+            print_info "模式: Sepolia 测试网部署"
+            check_dependencies
+            install_dependencies
+            compile_contracts
+            run_tests
+            deploy_sepolia
             ;;
         "test")
             print_info "模式: 仅测试"
@@ -229,13 +379,14 @@ main() {
             print_success "清理完成！"
             ;;
         *)
-            echo "用法: $0 [local|test|build|clean]"
+            echo "用法: $0 [local|sepolia|test|build|clean]"
             echo ""
             echo "选项:"
-            echo "  local  - 完整的本地部署 (默认)"
-            echo "  test   - 仅运行测试"
-            echo "  build  - 仅编译合约"
-            echo "  clean  - 清理项目文件"
+            echo "  local   - 完整的本地部署 (默认)"
+            echo "  sepolia - 部署到 Sepolia 测试网"
+            echo "  test    - 仅运行测试"
+            echo "  build   - 仅编译合约"
+            echo "  clean   - 清理项目文件"
             exit 1
             ;;
     esac

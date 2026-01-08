@@ -66,19 +66,7 @@ deploy-local:
 # 部署到 Sepolia 测试网
 deploy-sepolia:
 	@echo "🌐 部署到 Sepolia 测试网..."
-	@if [ -z "$$PRIVATE_KEY" ]; then \
-		echo "❌ 错误: 请设置 PRIVATE_KEY 环境变量"; \
-		exit 1; \
-	fi
-	@if [ -z "$$ALCHEMY_API_KEY" ]; then \
-		echo "❌ 错误: 请设置 ALCHEMY_API_KEY 环境变量"; \
-		exit 1; \
-	fi
-	forge script script/Deploy.s.sol:Deploy \
-		--rpc-url sepolia \
-		--broadcast \
-		--verify \
-		--private-key $$PRIVATE_KEY
+	./deploy.sh sepolia
 
 # Docker 构建
 docker-build:
