@@ -380,8 +380,9 @@ find_available_port() {
 start_web_server() {
     local port=$(find_available_port 8080)
 
+    # 检查 find_available_port 是否找到了可用端口
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-        print_warning "无法找到可用端口（尝试范围 8080-8089）"
+        print_error "无法找到可用端口（尝试范围 8080-8089，所有端口均被占用）"
         return 1
     fi
 
@@ -400,6 +401,7 @@ start_web_server() {
         return 0
     else
         print_error "Web 服务器启动失败"
+        cat /tmp/web_server.log
         return 1
     fi
 }
@@ -414,16 +416,28 @@ open_browser() {
     # 根据操作系统选择打开浏览器的命令
     if command -v open >/dev/null 2>&1; then
         # macOS
-        open "$url"
+        print_info "检测到 macOS，使用 open 命令..."
+        open "$url" 2>/dev/null || {
+            print_warning "无法自动打开浏览器，请手动访问: $url"
+            return 0
+        }
     elif command -v xdg-open >/dev/null 2>&1; then
         # Linux
-        xdg-open "$url"
+        print_info "检测到 Linux，使用 xdg-open 命令..."
+        xdg-open "$url" 2>/dev/null || {
+            print_warning "无法自动打开浏览器，请手动访问: $url"
+            return 0
+        }
     elif command -v start >/dev/null 2>&1; then
         # Windows (Git Bash)
-        start "$url"
+        print_info "检测到 Windows，使用 start 命令..."
+        start "$url" 2>/dev/null || {
+            print_warning "无法自动打开浏览器，请手动访问: $url"
+            return 0
+        }
     else
-        print_warning "无法自动打开浏览器，请手动访问: $url"
-        return 1
+        print_warning "未检测到浏览器命令，请手动访问: $url"
+        return 0
     fi
 
     print_success "浏览器已打开"
@@ -499,9 +513,9 @@ main() {
             run_tests
             start_local_node
             deploy_local
-            start_web_server
+            start_web_server || print_warning "Web 服务器启动失败，跳过前端服务"
             show_deployment_info
-            open_browser
+            open_browser || true
             ;;
         "sepolia")
             print_info "模式: Sepolia 测试网部署"
