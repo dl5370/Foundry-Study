@@ -357,29 +357,106 @@ deploy_sepolia() {
     fi
 }
 
+# 查找可用的端口
+find_available_port() {
+    local start_port=${1:-8080}
+    local port=$start_port
+    local max_attempts=10
+
+    for ((i=0; i<max_attempts; i++)); do
+        if ! lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+            echo $port
+            return 0
+        fi
+        port=$((port + 1))
+    done
+
+    # 如果找不到可用端口，返回默认值
+    echo $start_port
+    return 1
+}
+
+# 启动 Web 服务器
+start_web_server() {
+    local port=$(find_available_port 8080)
+
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        print_warning "无法找到可用端口（尝试范围 8080-8089）"
+        return 1
+    fi
+
+    print_info "启动 Web 服务器（端口 $port）..."
+
+    python3 -m http.server $port > /tmp/web_server.log 2>&1 &
+    WEB_SERVER_PID=$!
+
+    # 等待服务器启动
+    sleep 2
+
+    if kill -0 $WEB_SERVER_PID 2>/dev/null; then
+        print_success "Web 服务器已启动 (PID: $WEB_SERVER_PID, 端口: $port)"
+        echo $WEB_SERVER_PID > .webserver.pid
+        echo $port > .webserver.port
+        return 0
+    else
+        print_error "Web 服务器启动失败"
+        return 1
+    fi
+}
+
+# 打开浏览器
+open_browser() {
+    local port=$(cat .webserver.port 2>/dev/null || echo "8080")
+    local url="http://localhost:$port/docs/MultiSigWallet_Web3.html"
+
+    print_info "打开前端应用: $url"
+
+    # 根据操作系统选择打开浏览器的命令
+    if command -v open >/dev/null 2>&1; then
+        # macOS
+        open "$url"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        # Linux
+        xdg-open "$url"
+    elif command -v start >/dev/null 2>&1; then
+        # Windows (Git Bash)
+        start "$url"
+    else
+        print_warning "无法自动打开浏览器，请手动访问: $url"
+        return 1
+    fi
+
+    print_success "浏览器已打开"
+    return 0
+}
+
 # 显示部署信息
 show_deployment_info() {
+    local port=$(cat .webserver.port 2>/dev/null || echo "8080")
+
     print_header
     print_success "🎉 部署完成！"
     echo ""
-    print_info "📋 部署信息："
+    print_info "📋 智能合约部署信息："
     echo "  • 网络: 本地 Anvil 节点"
     echo "  • RPC URL: http://localhost:8545"
     echo "  • Chain ID: 31337"
+    echo ""
+    print_info "🌐 前端应用："
+    echo "  • URL: http://localhost:$port/docs/MultiSigWallet_Web3.html"
+    echo "  • 模拟器: http://localhost:$port/docs/MultiSigWallet_Simulator.html"
     echo ""
     print_info "📁 重要文件："
     echo "  • 部署记录: broadcast/"
     echo "  • 合约 ABI: out/"
     echo "  • 源代码: src/"
+    echo "  • 部署配置: .env.deployed"
     echo ""
     print_info "🔧 常用命令："
     echo "  • 查看合约: cast call <CONTRACT_ADDRESS> <FUNCTION>"
     echo "  • 发送交易: cast send <CONTRACT_ADDRESS> <FUNCTION> --private-key <KEY>"
     echo "  • 停止节点: kill \$(cat .anvil.pid) 2>/dev/null || true"
-    echo ""
-    print_info "🌐 Web3 dApp："
-    echo "  • 打开 docs/MultiSigWallet_Web3.html 与合约交互"
-    echo "  • 或者运行模拟器: open docs/MultiSigWallet_Simulator.html"
+    echo "  • 停止 Web 服务: kill \$(cat .webserver.pid) 2>/dev/null || true"
 }
 
 # 清理函数
@@ -390,6 +467,15 @@ cleanup() {
             print_info "停止 Anvil 节点..."
             kill $ANVIL_PID
             rm -f .anvil.pid
+        fi
+    fi
+
+    if [ -f ".webserver.pid" ]; then
+        WEB_SERVER_PID=$(cat .webserver.pid)
+        if kill -0 $WEB_SERVER_PID 2>/dev/null; then
+            print_info "停止 Web 服务器..."
+            kill $WEB_SERVER_PID
+            rm -f .webserver.pid .webserver.port
         fi
     fi
 }
@@ -413,7 +499,9 @@ main() {
             run_tests
             start_local_node
             deploy_local
+            start_web_server
             show_deployment_info
+            open_browser
             ;;
         "sepolia")
             print_info "模式: Sepolia 测试网部署"
@@ -449,7 +537,7 @@ main() {
             echo "用法: $0 [local|sepolia|test|build|clean]"
             echo ""
             echo "选项:"
-            echo "  local   - 完整的本地部署 (默认)"
+            echo "  local   - 完整部署 (智能合约 + 前端服务器 + 自动打开浏览器) (默认)"
             echo "  sepolia - 部署到 Sepolia 测试网"
             echo "  test    - 仅运行测试"
             echo "  build   - 仅编译合约"

@@ -7,6 +7,40 @@
     <!-- ethers.js 库 - 主 CDN + 备用 CDN -->
     <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <script>
+        // Global deployment configuration
+        let deploymentConfig = {
+            multiSigAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3', // default fallback
+            tokenAddress: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'    // default fallback
+        };
+
+        // Load deployment configuration from .env.deployed
+        async function loadDeploymentConfig() {
+            try {
+                const response = await fetch('../.env.deployed');
+                if (!response.ok) throw new Error('Failed to load .env.deployed');
+
+                const envContent = await response.text();
+                const lines = envContent.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('MULTISIG_ADDRESS=')) {
+                        deploymentConfig.multiSigAddress = line.split('=')[1].trim();
+                        console.log('✅ Loaded MULTISIG_ADDRESS from .env.deployed');
+                    }
+                    if (line.startsWith('TOKEN_ADDRESS=')) {
+                        deploymentConfig.tokenAddress = line.split('=')[1].trim();
+                        console.log('✅ Loaded TOKEN_ADDRESS from .env.deployed');
+                    }
+                }
+                console.log('📋 Deployment config:', deploymentConfig);
+            } catch (error) {
+                console.warn('⚠️ Could not load .env.deployed, using defaults:', error.message);
+            }
+        }
+
+        // Load config immediately
+        loadDeploymentConfig();
+
         // 如果主 CDN 加载失败，使用备用 CDN
         if (typeof ethers === 'undefined') {
             console.warn('主 CDN 加载失败，尝试备用 CDN...');
@@ -606,10 +640,10 @@
                 if (typeof window.ethereum !== 'undefined') {
                     addLog('系统', '✅ 检测到 MetaMask 扩展');
 
-                    // Auto-fill contract addresses
-                    document.getElementById('walletAddress').value = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-                    document.getElementById('tokenAddress').value = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-                    addLog('系统', '✅ 已自动填充合约地址');
+                    // Auto-fill contract addresses from deployment config
+                    document.getElementById('walletAddress').value = deploymentConfig.multiSigAddress;
+                    document.getElementById('tokenAddress').value = deploymentConfig.tokenAddress;
+                    addLog('系统', `✅ 已自动填充合约地址 (${deploymentConfig.multiSigAddress.substring(0, 8)}...)`);
                     return;
                 }
 
@@ -678,10 +712,10 @@
         function completeMetaMaskDetection() {
             addLog('成功', '✅ 检测到 MetaMask！');
 
-            // Auto-fill contract addresses
-            document.getElementById('walletAddress').value = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-            document.getElementById('tokenAddress').value = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-            addLog('系统', '✅ 已自动填充合约地址');
+            // Auto-fill contract addresses from deployment config
+            document.getElementById('walletAddress').value = deploymentConfig.multiSigAddress;
+            document.getElementById('tokenAddress').value = deploymentConfig.tokenAddress;
+            addLog('系统', `✅ 已自动填充合约地址 (${deploymentConfig.multiSigAddress.substring(0, 8)}...)`);
 
             alert('✅ MetaMask 检测成功！\n\n现在请点击"连接 MetaMask"按钮连接你的钱包。');
         }
