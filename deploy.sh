@@ -498,11 +498,6 @@ cleanup() {
 main() {
     print_header
 
-    # 设置清理陷阱（仅对本地部署）
-    if [ "${1:-local}" == "local" ]; then
-        trap cleanup EXIT
-    fi
-
     # 检查参数
     case "${1:-local}" in
         "local")
@@ -516,6 +511,15 @@ main() {
             start_web_server || print_warning "Web 服务器启动失败，跳过前端服务"
             show_deployment_info
             open_browser || true
+
+            # 本地部署模式：保持服务运行，等待用户中断
+            print_info "✨ 服务已启动！按 Ctrl+C 停止所有服务"
+            echo ""
+
+            # 无限等待，允许用户手动停止
+            while true; do
+                sleep 3600
+            done
             ;;
         "sepolia")
             print_info "模式: Sepolia 测试网部署"
@@ -560,6 +564,10 @@ main() {
             ;;
     esac
 }
+
+# 清理函数 - 仅在用户中断时调用
+trap cleanup INT TERM
+
 
 # 运行主函数
 main "$@"

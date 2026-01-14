@@ -90,11 +90,145 @@
         }
 
         .connection-status {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: white;
+        }
+
+        .connection-status h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .account-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .account-card.connected {
+            border-left: 5px solid #10b981;
+        }
+
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .account-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-badge.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.disconnected {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .account-info {
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .account-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .account-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .account-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .account-value {
+            color: #333;
+            word-break: break-all;
+            text-align: right;
+            max-width: 50%;
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .balance-item {
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .balance-item.eth {
+            border-left: 4px solid #f6ad55;
+        }
+
+        .balance-item.token {
+            border-left: 4px solid #667eea;
+        }
+
+        .balance-label {
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .balance-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .balance-unit {
+            font-size: 0.8em;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .connection-status .state-item {
+            background: rgba(255, 255, 255, 0.15);
+            border-left: none;
+            color: white;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .connection-status .state-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .connection-status .state-value {
+            color: #fef3c7;
         }
 
         .main-grid {
@@ -412,22 +546,48 @@
 
         <!-- Connection Status -->
         <div class="connection-status">
-            <h2 style="color: #667eea; margin-bottom: 15px;">🔌 连接状态</h2>
-            <div class="state-item">
-                <span class="state-label">钱包连接:</span>
-                <span class="state-value" id="walletConnection">未连接</span>
+            <h2>🔌 MetaMask 连接状态</h2>
+
+            <!-- Account Card -->
+            <div class="account-card" id="accountCard">
+                <div class="account-header">
+                    <div class="account-status">
+                        <span id="accountStatusIcon">❌</span>
+                        <span id="accountStatusText">未连接</span>
+                    </div>
+                    <span class="status-badge disconnected" id="statusBadge">未连接</span>
+                </div>
+
+                <div class="account-info" id="accountInfo" style="display: none;">
+                    <div class="account-info-row">
+                        <span class="account-label">📍 账户地址:</span>
+                        <span class="account-value" id="accountAddress">-</span>
+                    </div>
+                    <div class="account-info-row">
+                        <span class="account-label">🌐 网络:</span>
+                        <span class="account-value" id="accountNetwork">-</span>
+                    </div>
+
+                    <div class="balance-grid">
+                        <div class="balance-item eth">
+                            <div class="balance-label">ETH 余额</div>
+                            <div class="balance-value" id="ethBalance">-</div>
+                            <div class="balance-unit">Ethereum</div>
+                        </div>
+                        <div class="balance-item token">
+                            <div class="balance-label">代币余额</div>
+                            <div class="balance-value" id="tokenBalance">-</div>
+                            <div class="balance-unit">MockERC20</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="state-item">
-                <span class="state-label">当前账户:</span>
-                <span class="state-value" id="currentAccount">-</span>
-            </div>
-            <div class="state-item">
-                <span class="state-label">网络:</span>
-                <span class="state-value" id="network">-</span>
-            </div>
-            <button class="btn-primary" id="connectBtn" onclick="connectWallet()">连接 MetaMask</button>
-            <button class="btn-secondary" id="retryBtn" onclick="retryDetectMetaMask()" style="margin-top: 10px; background: #f0f0f0; color: #333;">🔄 重新检查 MetaMask</button>
-            <button class="btn-secondary" id="diagBtn" onclick="runDiagnostics()" style="margin-top: 10px; background: #f0f0f0; color: #333;">🔧 运行诊断</button>
+
+            <!-- Buttons -->
+            <button class="btn-primary" id="connectBtn" onclick="connectWallet()">🦊 连接 MetaMask</button>
+            <button class="btn-secondary" id="refreshBalanceBtn" onclick="refreshBalances()" style="margin-top: 10px; background: rgba(255,255,255,0.2); color: white; display: none;">🔄 刷新余额</button>
+            <button class="btn-secondary" id="retryBtn" onclick="retryDetectMetaMask()" style="margin-top: 10px; background: rgba(255,255,255,0.2); color: white;">🔄 重新检查 MetaMask</button>
+            <button class="btn-secondary" id="diagBtn" onclick="runDiagnostics()" style="margin-top: 10px; background: rgba(255,255,255,0.2); color: white;">🔧 运行诊断</button>
         </div>
 
         <!-- Configuration -->
@@ -628,6 +788,11 @@
 
             // Check if MetaMask is installed with retry logic
             checkMetaMaskWithRetry();
+
+            // Try auto-connect if previously authorized
+            setTimeout(() => {
+                autoConnectWallet();
+            }, 2000);
         });
 
         // Function to check MetaMask with extended retry logic
@@ -758,8 +923,89 @@ D. 最后方案：
             alert(debugInfo);
         }
 
+        // 自动连接 - 检查是否曾经授权过此网站
+        async function autoConnectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    console.log('MetaMask not available for auto-connect');
+                    return;
+                }
+
+                addLog('系统', '🔄 检查是否曾经授权...');
+
+                // Get previously authorized accounts (doesn't require user interaction)
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+
+                if (accounts && accounts.length > 0) {
+                    addLog('系统', `✅ 检测到已授权账户: ${accounts[0].substring(0, 10)}...`);
+                    addLog('系统', '正在自动连接...');
+
+                    // Set up provider and signer
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    currentAccount = accounts[0];
+
+                    // Get network
+                    const network = await provider.getNetwork();
+
+                    // Update UI with account info
+                    updateAccountUI(currentAccount, network);
+                    addLog('成功', `✅ 自动连接成功: ${currentAccount}`);
+                    addLog('网络', `✅ ${network.name} (Chain ID: ${network.chainId})`);
+
+                    // Setup event listeners for account changes
+                    window.ethereum.on('accountsChanged', (accounts) => {
+                        if (accounts.length === 0) {
+                            addLog('断开', '账户已断开');
+                            location.reload();
+                        } else {
+                            currentAccount = accounts[0];
+                            document.getElementById('accountAddress').textContent = currentAccount;
+                            addLog('切换', `切换到账户: ${currentAccount}`);
+                            refreshBalances();
+                            refreshState();
+                        }
+                    });
+
+                    window.ethereum.on('chainChanged', () => {
+                        addLog('提示', '网络已改变，正在重新加载...');
+                        location.reload();
+                    });
+
+                    // Load balances
+                    setTimeout(() => {
+                        addLog('系统', '正在加载账户余额...');
+                        refreshBalances();
+                    }, 500);
+
+                    // Auto-load contracts
+                    setTimeout(() => {
+                        addLog('系统', '正在自动加载合约...');
+                        loadContracts();
+                    }, 1000);
+
+                    return true;
+                } else {
+                    addLog('系统', '📝 未检测到已授权账户，请手动连接');
+                    return false;
+                }
+
+            } catch (error) {
+                console.warn('Auto-connect failed:', error);
+                addLog('提示', '⚠️ 自动连接失败，可手动连接钱包');
+                return false;
+            }
+        }
+
         async function connectWallet() {
             try {
+                // Check if already connected
+                if (currentAccount && signer && provider) {
+                    addLog('提示', '💡 钱包已连接，如需切换账户请在 MetaMask 中操作');
+                    alert('钱包已连接\n\n当前账户: ' + currentAccount + '\n\n如需切换账户，请在 MetaMask 中选择其他账户');
+                    return;
+                }
+
                 // Check 1: MetaMask installed? (with retry)
                 if (typeof window.ethereum === 'undefined') {
                     addLog('系统', '第一次检测未找到 MetaMask，进行延迟重试...');
@@ -808,26 +1054,53 @@ D. 最后方案：
                 console.log('Current account:', currentAccount);
                 addLog('成功', `✅ 已连接到账户: ${currentAccount}`);
 
+                // 验证钱包是否真正可用 - 尝试签署一个测试消息
+                addLog('验证', '正在验证钱包可用性...');
+                try {
+                    const testMessage = "Verify wallet connection";
+                    const signature = await signer.signMessage(testMessage);
+                    console.log('Wallet verification successful:', signature);
+                    addLog('验证', '✅ 钱包已验证可用');
+                } catch (verifyError) {
+                    console.warn('Wallet verification failed:', verifyError);
+                    addLog('警告', '⚠️ 钱包验证失败 - 您可能需要在 MetaMask 中登录');
+
+                    // 检查是否是锁定错误
+                    if (verifyError.message && (
+                        verifyError.message.includes('locked') ||
+                        verifyError.message.includes('Unauthorized') ||
+                        verifyError.message.includes('keyring') ||
+                        verifyError.code === -32603
+                    )) {
+                        alert('🔒 MetaMask 钱包已锁定\n\n请点击浏览器右上角的 MetaMask 图标，输入密码解锁钱包后重新连接。');
+                        document.getElementById('connectBtn').disabled = false;
+                        document.getElementById('connectBtn').textContent = '重新连接 MetaMask';
+                        return;
+                    }
+                }
+
                 // Get network
                 const network = await provider.getNetwork();
                 console.log('Network:', network);
                 addLog('成功', `✅ 网络: ${network.name} (Chain ID: ${network.chainId})`);
 
-                // Update UI
-                document.getElementById('walletConnection').textContent = '✅ 已连接';
-                document.getElementById('currentAccount').textContent = currentAccount;
-                document.getElementById('network').textContent = `${network.name} (Chain ID: ${network.chainId})`;
-                document.getElementById('connectBtn').textContent = '✅ 已连接';
-                document.getElementById('connectBtn').disabled = true;
+                // Update UI with new account card design
+                updateAccountUI(currentAccount, network);
 
                 addLog('连接', `✅ 已连接账户: ${currentAccount}`);
                 addLog('网络', `✅ ${network.name} (Chain ID: ${network.chainId})`);
+
+                // Load balances
+                setTimeout(() => {
+                    addLog('系统', '正在加载账户余额...');
+                    refreshBalances();
+                }, 500);
 
                 // Auto-load contracts after connecting
                 setTimeout(() => {
                     addLog('系统', '正在自动加载合约...');
                     loadContracts();
-                }, 500);
+                }, 1000);
 
                 // Listen for account changes
                 window.ethereum.on('accountsChanged', (accounts) => {
@@ -836,8 +1109,9 @@ D. 最后方案：
                         location.reload();
                     } else {
                         currentAccount = accounts[0];
-                        document.getElementById('currentAccount').textContent = currentAccount;
+                        document.getElementById('accountAddress').textContent = currentAccount;
                         addLog('切换', `切换到账户: ${currentAccount}`);
+                        refreshBalances();
                         refreshState();
                     }
                 });
@@ -928,6 +1202,12 @@ D. 最后方案：
 
                 // Refresh state
                 await refreshState();
+
+                // Refresh balances now that contracts are loaded
+                setTimeout(() => {
+                    addLog('系统', '正在刷新账户余额...');
+                    refreshBalances();
+                }, 500);
 
                 alert('合约加载成功！');
 
@@ -1033,7 +1313,19 @@ D. 最后方案：
             } catch (error) {
                 console.error(error);
                 addLog('错误', `提交失败: ${error.message}`);
-                alert('提交交易失败: ' + error.message);
+
+                // 检查是否是钱包锁定错误
+                if (error.code === 4100 || error.code === -32603 || (error.message && (
+                    error.message.includes('locked') ||
+                    error.message.includes('Unauthorized') ||
+                    error.message.includes('keyring') ||
+                    error.message.toLowerCase().includes('user denied')
+                ))) {
+                    alert('🔒 操作被拒绝或钱包已锁定\n\n请按照以下步骤：\n1. 点击浏览器右上角的 MetaMask 图标\n2. 输入密码解锁钱包\n3. 重新提交交易');
+                    addLog('错误', '钱包被锁定或拒绝签署 - 请解锁 MetaMask');
+                } else {
+                    alert('提交交易失败: ' + error.message);
+                }
             }
         }
 
@@ -1088,7 +1380,19 @@ D. 最后方案：
             } catch (error) {
                 console.error(error);
                 addLog('错误', `确认失败: ${error.message}`);
-                alert('确认交易失败: ' + error.message);
+
+                // 检查是否是钱包锁定错误
+                if (error.code === 4100 || error.code === -32603 || (error.message && (
+                    error.message.includes('locked') ||
+                    error.message.includes('Unauthorized') ||
+                    error.message.includes('keyring') ||
+                    error.message.toLowerCase().includes('user denied')
+                ))) {
+                    alert('🔒 操作被拒绝或钱包已锁定\n\n请按照以下步骤：\n1. 点击浏览器右上角的 MetaMask 图标\n2. 输入密码解锁钱包\n3. 重新确认交易');
+                    addLog('错误', '钱包被锁定或拒绝签署 - 请解锁 MetaMask');
+                } else {
+                    alert('确认交易失败: ' + error.message);
+                }
             }
         }
 
@@ -1114,7 +1418,19 @@ D. 最后方案：
             } catch (error) {
                 console.error(error);
                 addLog('错误', `撤销失败: ${error.message}`);
-                alert('撤销确认失败: ' + error.message);
+
+                // 检查是否是钱包锁定错误
+                if (error.code === 4100 || error.code === -32603 || (error.message && (
+                    error.message.includes('locked') ||
+                    error.message.includes('Unauthorized') ||
+                    error.message.includes('keyring') ||
+                    error.message.toLowerCase().includes('user denied')
+                ))) {
+                    alert('🔒 操作被拒绝或钱包已锁定\n\n请按照以下步骤：\n1. 点击浏览器右上角的 MetaMask 图标\n2. 输入密码解锁钱包\n3. 重新撤销确认');
+                    addLog('错误', '钱包被锁定或拒绝签署 - 请解锁 MetaMask');
+                } else {
+                    alert('撤销确认失败: ' + error.message);
+                }
             }
         }
 
@@ -1140,7 +1456,78 @@ D. 最后方案：
             } catch (error) {
                 console.error(error);
                 addLog('错误', `执行失败: ${error.message}`);
-                alert('执行交易失败: ' + error.message);
+
+                // 检查是否是钱包锁定错误
+                if (error.code === 4100 || error.code === -32603 || (error.message && (
+                    error.message.includes('locked') ||
+                    error.message.includes('Unauthorized') ||
+                    error.message.includes('keyring') ||
+                    error.message.toLowerCase().includes('user denied')
+                ))) {
+                    alert('🔒 操作被拒绝或钱包已锁定\n\n请按照以下步骤：\n1. 点击浏览器右上角的 MetaMask 图标\n2. 输入密码解锁钱包\n3. 重新执行交易');
+                    addLog('错误', '钱包被锁定或拒绝签署 - 请解锁 MetaMask');
+                } else {
+                    alert('执行交易失败: ' + error.message);
+                }
+            }
+        }
+
+        // 更新账户UI卡片
+        function updateAccountUI(account, network) {
+            // Show account card
+            document.getElementById('accountCard').classList.add('connected');
+            document.getElementById('accountInfo').style.display = 'block';
+
+            // Update status
+            document.getElementById('accountStatusIcon').textContent = '✅';
+            document.getElementById('accountStatusText').textContent = '已连接';
+            document.getElementById('statusBadge').textContent = '已连接';
+            document.getElementById('statusBadge').className = 'status-badge connected';
+
+            // Update account info
+            document.getElementById('accountAddress').textContent = account;
+            document.getElementById('accountNetwork').textContent = `${network.name} (Chain ID: ${network.chainId})`;
+
+            // Update button
+            document.getElementById('connectBtn').textContent = '✅ 已连接';
+            document.getElementById('connectBtn').disabled = true;
+
+            // Show refresh balance button
+            document.getElementById('refreshBalanceBtn').style.display = 'inline-block';
+        }
+
+        // 获取并刷新余额
+        async function refreshBalances() {
+            try {
+                if (!provider || !currentAccount) {
+                    addLog('错误', '钱包未连接');
+                    return;
+                }
+
+                addLog('加载', '正在获取账户余额...');
+
+                // Get ETH balance
+                const ethBalanceWei = await provider.getBalance(currentAccount);
+                const ethBalance = ethers.utils.formatEther(ethBalanceWei);
+                document.getElementById('ethBalance').textContent = parseFloat(ethBalance).toFixed(4);
+
+                addLog('成功', `✅ ETH 余额: ${parseFloat(ethBalance).toFixed(4)} ETH`);
+
+                // Get token balance if contract is loaded
+                if (tokenContract) {
+                    const tokenBalanceWei = await tokenContract.balanceOf(currentAccount);
+                    const tokenBalance = ethers.utils.formatUnits(tokenBalanceWei, 18);
+                    document.getElementById('tokenBalance').textContent = parseFloat(tokenBalance).toFixed(2);
+
+                    addLog('成功', `✅ 代币余额: ${parseFloat(tokenBalance).toFixed(2)} MOCK`);
+                } else {
+                    document.getElementById('tokenBalance').textContent = '加载中...';
+                    addLog('提示', '代币合约未加载，无法获取代币余额');
+                }
+
+            } catch (error) {
+                console.error('Error fetching balance:', error);
+                addLog('错误', `获取余额失败: ${error.message}`);
             }
         }
 
