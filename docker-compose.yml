@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Foundry 开发环境
+  foundry-dev:
+    build: .
+    container_name: foundry-study
+    volumes:
+      - .:/workspace
+      - foundry-cache:/root/.foundry
+    environment:
+      - RUST_BACKTRACE=1
+      - FOUNDRY_ETH_RPC_URL=http://anvil:8545
+    ports:
+      - "8545:8545"  # Anvil RPC 端口
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: bash
+
+  # Anvil 本地区块链节点
+  anvil:
+    build: .
+    container_name: foundry-anvil
+    volumes:
+      - .:/workspace
+    ports:
+      - "8546:8545"  # 暴露为 8546 避免冲突
+    working_dir: /workspace
+    command: anvil --host 0.0.0.0 --port 8545
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  foundry-cache:
+    driver: local
